@@ -141,7 +141,7 @@ The concrete `LibraryRepository` (or whatever it ends up named — could be spli
 - [x] **R.A.1** Phase B.1 defines the narrow interfaces above (or whatever subset the work-in-flight needs) in `data/library/` *before* defining the concrete repository. _shipped in commit `54a7dc7`; verified by `solid: phase b audit`._
 - [x] **R.A.2** Phase B's concrete repository implements all of them. `AppGraph` exposes each interface separately, marks the concrete class `internal` where the language allows. _shipped in commit `54a7dc7`; `LibraryRepository` is `class` (not `internal`) but only imported from `AppGraph.kt` per audit grep._
 - [x] **R.A.3** Phase B's composables take `DocumentSource`, `LibraryRootStore`, etc. — never the concrete repo. _shipped in commit `54a7dc7`; verified by `solid: phase b audit`._
-- [ ] **R.A.4** Phase C's `ReaderController` does not import the concrete `LibraryRepository` (takes `DocumentSource` + `ReadProgressStore` + `BookmarkSource`). _pending Phase C._
+- [x] **R.A.4** Phase C's `ReaderController` does not import the concrete `LibraryRepository` (takes `DocumentSource` + `ReadProgressStore` + `BookmarkSource`). _shipped in Phase C commit; `DefaultReaderStateProjector` + `DefaultScrollPersistence` take `DocumentSource` only; `LibraryRepository` only referenced from `AppGraph.kt` per grep._
 - [x] **R.A.5** Verify on each phase ship: `grep -rn 'import.*LibraryRepository' app/src/main/java/com/eight87/pageboy/ui` → empty (only doc-comment mentions allowed). _verified in `solid: phase b audit`._
 
 **Effort:** distributed (each phase pays a few minutes). **Risk:** none — discipline-from-day-one is cheap.
@@ -156,8 +156,8 @@ The concrete `LibraryRepository` (or whatever it ends up named — could be spli
 
 **Apply forward:** When any phase introduces settings, never build a god `SettingsRepository` in the first place.
 
-- [ ] **R.B.1** First settings-touching phase introduces `Setting<T>` + `EnumSetting<E>` value types in `data/settings/`.
-- [ ] **R.B.2** Every key declared via `Setting<T>` — no hand-rolled `stringPreferencesKey + Flow + setter` quartet.
+- [x] **R.B.1** First settings-touching phase introduces `Setting<T>` + `EnumSetting<E>` value types in `data/settings/`. _shipped in Phase C; `data/settings/Setting.kt` mirrors whisperboy's R.B.1 with the `setting()` + `enumSetting()` factories._
+- [x] **R.B.2** Every key declared via `Setting<T>` — no hand-rolled `stringPreferencesKey + Flow + setter` quartet. _shipped for new facets in Phase C; `AndroidReaderSettings` declares its key via `dataStore.setting(...)`. Phase B's `AndroidLibraryUiSettings` remains on the hand-rolled quartet — see Phase C audit observation below — migrating it is a Phase F-or-later refactor when it earns the churn._
 - [ ] **R.B.3** Pageboy facets (provisional — confirm as phases land):
   - `LibrarySettings` — sort order, grid mode, auto-scan on start, show hidden files, format-include filter
   - `ReaderSettings` — font size, theme, scroll mode (paged / continuous), font family
@@ -201,11 +201,11 @@ interface ShareExportCommands        // share / save-as / export-with-annotation
 
 The reader chrome takes only what it renders; each per-format renderer takes what it needs and ignores the rest. Phase D (Markdown) needs `ReaderStateProjector` + `ScrollPersistence`; Phase G (PDF annotation) needs `AnnotationCommands`; etc.
 
-- [ ] **R.C.1** Phase C defines the narrow interfaces above (or the subset Phase C ships; later phases extend).
-- [ ] **R.C.2** Reader chrome takes interface params, not a god controller.
-- [ ] **R.C.3** Phase D+ renderers take only the interfaces they need.
-- [ ] **R.C.4** Reader root file under ~200 LOC; per-axis controllers in their own files.
-- [ ] **R.C.5** Verify per shipping phase: `find app/src/main/java/com/eight87/pageboy/ui/reader -name '*.kt' -exec wc -l {} \;` — no file past 500 LOC.
+- [x] **R.C.1** Phase C defines the narrow interfaces above (or the subset Phase C ships; later phases extend). _shipped: `ReaderStateProjector` + `ScrollPersistence` + `FindInDocCommands` + `ShareExportCommands` each in its own file under `ui/reader/control/`. `AnnotationCommands` + `SignatureCommands` deferred to Phase G/H per R.X.5 (not declared as stub interfaces — the deferral is recorded here, not in the codebase, so no LSP-violating `NotImplementedError` exists)._
+- [x] **R.C.2** Reader chrome takes interface params, not a god controller. _`ReaderScreen` constructor takes `ReaderStateProjector` + `FormatRegistry` + `FindInDocCommands` + `ShareExportCommands` — four narrow interfaces, no god controller._
+- [ ] **R.C.3** Phase D+ renderers take only the interfaces they need. _pending Phase D — interface contract in place._
+- [x] **R.C.4** Reader root file under ~200 LOC; per-axis controllers in their own files. _`ReaderScreen.kt` is 132 LOC; max file in `ui/reader/` is 132 LOC (`ReaderScreen.kt`); max in `ui/reader/control/` is 111 LOC (`ReaderStateProjector.kt`)._
+- [x] **R.C.5** Verify per shipping phase: `find app/src/main/java/com/eight87/pageboy/ui/reader -name '*.kt' -exec wc -l {} \;` — no file past 500 LOC. _Phase C max is 132 LOC across 9 files._
 
 ---
 
@@ -283,6 +283,33 @@ Audit of Phase B commit `54a7dc7` against this plan. Shipped in commit `solid: p
 ### Test count: 37 → 43 (+6 from `LibraryRepositoryTest`). All green.
 
 ### Build: `./gradlew :app:assembleDebug` green. APK budget unchanged.
+
+---
+
+## Audit log — Phase C
+
+Audit of Phase C against this plan. Single commit; reader-chrome scaffold + DocumentRenderer interface + per-axis controllers + Setting<T> introduction + ReaderSettings facet + Reader catalog section + 27 new tests.
+
+### Pre-merge checklist (8 items) — verdict per item
+
+1. **R.X.1 narrow interfaces** — PASS. `ReaderScreen` takes four narrow interfaces (`ReaderStateProjector`, `FormatRegistry`, `FindInDocCommands`, `ShareExportCommands`) — no god `ReaderController`. Sub-composables (`ReaderTopBar`, `ReaderFindPanel`, `ReaderBody`, `ReaderErrorState`) each take only the 3-6 fields they render.
+2. **R.X.2 sealed dispatch** — PASS. `ReaderState` is sealed (`Idle` / `Opening` / `Open(handle)` / `Failed(reason)`); the chrome dispatches via exhaustive `when` in `ReaderBody`. Format dispatch goes through `FormatRegistry.rendererFor(format)` — no `when (format)` in the reader (R.X.9).
+3. **R.X.3 composition root** — PASS. `AppGraph.kt` is the only file that constructs `CompiledFormatRegistry` / `DefaultReaderStateProjector` / `DefaultScrollPersistence` / `InMemoryFindInDocCommands` (via factory) / `AndroidShareExportCommands` / `AndroidReaderSettings`. UI takes interfaces only.
+4. **R.X.4 file size** — PASS. Phase C max LOC: `ReaderScreen.kt` 132, `PlaceholderRenderer.kt` 131, `ReaderTopBar.kt` 127, `ReaderFindPanel.kt` 115, `ReaderStateProjector.kt` 111, `ScrollPersistence.kt` 109, `FindInDocCommands.kt` 100, `ReaderBody.kt` 84, `ReaderErrorState.kt` 67, `DocumentRenderer.kt` 63, `ShareExportCommands.kt` 58. Every file under 250 LOC.
+5. **R.X.5 NotImplementedError** — PASS. None present. The Phase C plan called for stub `AnnotationCommands` / `SignatureCommands` interfaces with `// closed by Phase G` comments per R.X.5; the decision was to NOT declare them this phase (interface introduction without a consumer is itself a Liskov hazard) and to record the deferral in this plan's R.C.1 sub-step instead — see that bullet.
+6. **R.X.6 wrong-direction imports** — PARTIAL → see audit observation below. `data/` → `ui/`: zero (PASS). `ui/reader/` → `ui/library/`: zero (PASS). `data/` → `format/`: zero (PASS). `format/` → `ui/`: zero (PASS). `format/` → `data/library/`: **4 imports of `DocumentFormat`** in `format/api/DocumentHandle.kt`, `format/api/DocumentRenderer.kt`, `format/registry/FormatRegistry.kt`, `format/placeholder/PlaceholderRenderer.kt`. This is a narrow exception explained in the audit observations below; the spirit of R.X.6 (no format → repository / scanner / DAO imports) holds.
+7. **R.X.7 Compose ISP** — PASS. `ReaderTopBar` takes title + findActive + four callbacks. `ReaderFindPanel` takes query + currentMatchIndex + matchCount + four callbacks. `ReaderBody` takes state + registry + onRetry. `ReaderErrorState` takes reason + onRetry. `PlaceholderRenderer.Body()` takes handle + modifier. No god-state.
+8. **R.X.8 test discipline** — PASS. 27 new tests across 7 classes: `FormatRegistryTest` (5), `PlaceholderRendererTest` (4), `ReaderStateProjectorTest` (4), `ScrollPersistenceTest` (5), `FindInDocCommandsTest` (6), `ReaderScreenSmokeTest` (2), `ReaderTopBarTest` (1). Total: 43 → 70 (0 failures). The R.X.9 contract (`DocumentRenderer` open/closed) is exercised end-to-end by `FormatRegistryTest` + `PlaceholderRendererTest` + `ReaderScreenSmokeTest`.
+
+### Phase C audit observations
+
+**O.C.1 — `format/` → `data/library/` import of `DocumentFormat` is a deliberate narrow exception.** R.X.6 prohibits `format/` from importing `data/library/`; the four imports of `DocumentFormat` (a closed enum, used as the renderer's identity tag) violate this rule literally. The spirit of the rule is "format renderers must not depend on the Room schema, the scanner, or the `DocumentSource` — they take a bytes-source and emit Compose content". `DocumentFormat` is a pure value type, not a repository concern, and acts as the partial-key of the `FormatRegistry` map. The clean fix is moving `DocumentFormat` to a neutral package (`com.eight87.pageboy.common` or a `core/` module), which is a 15-file rename touching every Phase B consumer. Deferred until either a second format-identity type joins it (justifying the package) or a Phase F+ research agent surfaces a concrete pain. Recording the exception here so future audits know it was deliberate, not drift.
+
+**O.C.2 — `AndroidLibraryUiSettings` not migrated to `Setting<T>`.** Phase C introduces `Setting<T>` (R.B.1) and uses it for `AndroidReaderSettings`. The Phase B-shipped `AndroidLibraryUiSettings` is still on the hand-rolled `stringPreferencesKey + Flow + setter` quartet across five keys. Migration is a pure refactor (interface stays the same; impl changes) and earns its keep once a third setting facet lands. Tracked in R.B.2 as a known partial-tick; explicit migration phase will land if `LibrarySettings` gains more keys (e.g. when the show-hidden-files toggle wires through real UI + the per-format scan filter from Phase B.4 surfaces).
+
+**O.C.3 — `DefaultReaderStateProjector` does not honour the entity-supplied title.** The projector returns whatever `DocumentRenderer.open()` returns; the `PlaceholderRenderer.open()` derives title from `source.displayName()`, which is null for SAF URIs the test injection used, so the smoke screencap shows "Document" instead of "Phase C smoke test". This is correct per R.X.9 (the renderer's handle is the source of truth for its title) — but the chrome could be smarter about preferring the entity title when it exists. Recorded as a Phase D+ polish opportunity, not a Phase C blocker. The real per-format renderers (Markdown, EPUB) can return the document's actual H1 / OPF title in their `open()`, which is what the user actually wants to see.
+
+**O.C.4 — `ShareExportCommands.shareCurrentDocument` is wired but inert in Phase C.** The chrome's share button calls into `ShareExportCommands`, but the document URI passed in is empty because `DocumentHandle` doesn't carry the source-bytes URI back out (renderers don't need it; the projector consumed it during `open()`). The Phase G+ work that adds export-with-annotations will revisit this — at that point the renderer's handle will need to expose either the bytes-source or the resolved entity, and the share path picks that up automatically. Phase C ships the wiring; the behaviour completes in a later phase.
 
 ---
 

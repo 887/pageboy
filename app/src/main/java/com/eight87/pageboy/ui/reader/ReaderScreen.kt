@@ -1,70 +1,132 @@
 package com.eight87.pageboy.ui.reader
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import com.eight87.pageboy.R
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.eight87.pageboy.format.registry.FormatRegistry
+import com.eight87.pageboy.ui.reader.control.FindInDocCommands
+import com.eight87.pageboy.ui.reader.control.ReaderState
+import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
+import com.eight87.pageboy.ui.reader.control.ShareExportCommands
 
 /**
- * Phase B placeholder reader. Real per-format rendering is Phase C–M.
+ * Phase C.5 — reader screen orchestrator. Holds no business logic; just
+ * the layout (top bar + optional find panel + body) and the wiring
+ * between the per-axis controllers (R.C) and the chrome pieces
+ * (top bar / find panel / body / error state — each in its own file
+ * per R.X.4 / R.D).
  *
- * Closed by Phase C: the chrome here is intentionally trivial — the
- * SOLID-shaped reader controllers (`ReaderStateProjector`,
- * `ScrollPersistence`, `FindInDocCommands`, etc., per `R.C` in
- * `docs/plans/refactor-solid.md`) and the `DocumentRenderer` open/closed
- * interface (R.X.9) land in Phase C. Until then this screen does not
- * dispatch on format — there's nothing to render — so no `when (format)`
- * switch exists in the reader to violate R.X.2.
+ * Takes narrow interfaces (R.X.1): [ReaderStateProjector],
+ * [FormatRegistry], [FindInDocCommands], [ShareExportCommands]. No god
+ * controller, no concrete repository import. The chrome reads the
+ * projected state + dispatches via the registry; the projector owns
+ * the open/close lifecycle.
  *
- * Mounted by `PageboyApp` when the user taps a document card. Records
- * the open (via `DocumentSource.recordOpen`) so the Recents tab populates
- * even without a real reader.
+ * Edge-to-edge insets honoured via `Modifier.windowInsetsPadding(systemBars)`
+ * — top inset eaten by the top bar, bottom inset eaten by the body so
+ * the per-format renderers don't have to think about it. The
+ * `WindowCompat.setDecorFitsSystemWindows(window, false)` is already
+ * set in [com.eight87.pageboy.PageboyActivity]'s `onCreate` (Phase A
+ * shipped that wiring).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderScreen(
-  title: String,
+  documentId: String,
+  readerStateProjector: ReaderStateProjector,
+  formatRegistry: FormatRegistry,
+  findInDocCommands: FindInDocCommands,
+  shareExportCommands: ShareExportCommands,
   onBack: () -> Unit,
+  modifier: Modifier = Modifier,
 ) {
-  Column(modifier = Modifier.fillMaxSize().semantics { testTag = "reader_screen" }) {
-    TopAppBar(
-      title = { Text(stringResource(R.string.reader_placeholder_title)) },
-      navigationIcon = {
-        IconButton(onClick = onBack) {
-          Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = stringResource(R.string.reader_back_cd),
+  val state by readerStateProjector.state.collectAsStateWithLifecycle()
+  val findQuery by findInDocCommands.query.collectAsStateWithLifecycle()
+  val findMatches by findInDocCommands.matches.collectAsStateWithLifecycle()
+  val findCurrent by findInDocCommands.currentMatchIndex.collectAsStateWithLifecycle()
+
+  var findPanelOpen by remember(documentId) { mutableStateOf(false) }
+
+  // Open the document on first compose for this id. Closing handled by
+  // the DisposableEffect below so leaving the screen releases the handle.
+  LaunchedEffect(documentId) {
+    readerStateProjector.open(documentId)
+  }
+  DisposableEffect(documentId) {
+    onDispose {
+      readerStateProjector.close()
+      findInDocCommands.clear()
+    }
+  }
+
+  val title = when (val s = state) {
+    is ReaderState.Open -> s.handle.title
+    is ReaderState.Failed -> ""
+    else -> ""
+  }
+
+  Column(
+    modifier = modifier
+      .fillMaxSize()
+      .windowInsetsPadding(WindowInsets.systemBars)
+      .semantics { testTag = "reader_screen" },
+  ) {
+    ReaderTopBar(
+      title = title,
+      findActive = findPanelOpen,
+      onBack = onBack,
+      onToggleFind = {
+        findPanelOpen = !findPanelOpen
+        if (!findPanelOpen) findInDocCommands.clear()
+      },
+      onShare = {
+        val open = state as? ReaderState.Open
+        if (open != null) {
+          // The chrome doesn't carry the SAF URI directly; the projector
+          // already resolved it to open the renderer, but it's not on
+          // the handle. For Phase C the share affordance defers to the
+          // entity's display name and a no-op URI; once Phase D lands a
+          // renderer that carries the source on its handle, the
+          // share-current-document call will pick that up. For Phase C
+          // the share path is wired but inert.
+          shareExportCommands.shareCurrentDocument(
+            documentUriString = "",
+            displayName = open.handle.title,
           )
         }
       },
     )
-    Box(
-      modifier = Modifier.fillMaxSize().padding(24.dp),
-      contentAlignment = Alignment.Center,
-    ) {
-      Text(
-        text = stringResource(R.string.reader_placeholder_body, title),
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
+    if (findPanelOpen) {
+      ReaderFindPanel(
+        query = findQuery,
+        currentMatchIndex = findCurrent,
+        matchCount = findMatches.size,
+        onQueryChange = findInDocCommands::setQuery,
+        onNext = findInDocCommands::next,
+        onPrevious = findInDocCommands::previous,
+        onClose = {
+          findPanelOpen = false
+          findInDocCommands.clear()
+        },
       )
     }
+    ReaderBody(
+      state = state,
+      formatRegistry = formatRegistry,
+      onRetry = { readerStateProjector.open(documentId) },
+      modifier = Modifier.fillMaxSize(),
+    )
   }
 }

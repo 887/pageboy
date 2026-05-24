@@ -100,8 +100,41 @@
     <string name="settings_library_show_hidden_label">Show hidden files</string>
     <string name="settings_library_show_hidden_subtitle">Include files whose name starts with a dot.</string>
 
-    <!-- Phase B — placeholder reader screen (real reader is Phase C). -->
+    <!-- Phase B — placeholder reader screen (superseded by Phase C). -->
     <string name="reader_placeholder_title">Reader</string>
     <string name="reader_placeholder_body">Reader for “%1$s” would open here.</string>
     <string name="reader_back_cd">Back</string>
+
+    <!-- Phase C — reader chrome. -->
+    <string name="reader_find_cd">Find in document</string>
+    <string name="reader_find_close_cd">Close find</string>
+    <string name="reader_find_placeholder">Find in document</string>
+    <string name="reader_find_prev_cd">Previous match</string>
+    <string name="reader_find_next_cd">Next match</string>
+    <string name="reader_share_cd">Share</string>
+    <string name="reader_overflow_cd">More options</string>
+    <string name="reader_overflow_empty_label">No actions yet</string>
+    <string name="reader_opening_label">Opening…</string>
+    <string name="reader_error_headline">Could not open document</string>
+    <string name="reader_error_retry">Retry</string>
+
+    <!-- Phase C — placeholder renderer copy. -->
+    <string name="reader_placeholder_headline">Pageboy doesn\'t yet know how to render %1$s.</string>
+    <string name="reader_placeholder_subtext">Support for this format will land in a future phase.</string>
+
+    <!-- Phase C — format labels (single source of truth for the placeholder body). -->
+    <string name="format_label_markdown">Markdown</string>
+    <string name="format_label_txt">plain text</string>
+    <string name="format_label_pdf">PDF</string>
+    <string name="format_label_epub">EPUB</string>
+    <string name="format_label_docx">DOCX</string>
+    <string name="format_label_xlsx">XLSX</string>
+    <string name="format_label_odt">ODT</string>
+    <string name="format_label_ods">ODS</string>
+    <string name="format_label_unknown">this format</string>
+
+    <!-- Phase C.8 — Reader settings section. -->
+    <string name="settings_group_reader_display">Display</string>
+    <string name="settings_reader_continuous_label">Continuous scrolling</string>
+    <string name="settings_reader_continuous_subtitle">Treat the document as one long scroll instead of paginated.</string>
 </resources>

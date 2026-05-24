@@ -1,6 +1,6 @@
 # pageboy — main build plan
 
-## Status: 🟢 Phase B shipped; Phase C next
+## Status: 🟢 Phase C shipped; Phase D next
 
 _Phase 0 verified, Phase A shipped (buildable Compose APK with family chrome — vertical nav rail, top bar, settings catalog DSL, AboutScreen, LicensesScreen, Licensee inventory). Phase B shipped (multi-root SAF document library — Room schema, four folder modes, magic-byte + extension classifier covering all 8 formats, scanner + rescan coordinator + repository, LibraryScreen with four whisperboy-style tabs + filters + search + sort, folders management screen, scan progress banner, Library settings section). Phases C+ are **stub headers** awaiting per-format research (see [`format-research.md`](format-research.md)) — each one names the format-research plan it depends on, and the research agent who owns that plan is expected to fill in the sub-step checkboxes for the corresponding phase before any implementation lands._
 
@@ -90,9 +90,21 @@ Goal: walk picked SAF tree roots, classify each entry by `DocumentFormat` via ex
 
 ---
 
-## Phase C — reader screen (universal chrome) _(stub — depends on [`format-research.md`](format-research.md) for the renderer interface shape)_
+## Phase C — reader chrome + DocumentRenderer + per-axis controllers
 
-Goal: the screen the user lands on when they tap a document. Top bar (back, title, find-in-doc, share, overflow), bottom inset-aware annotation toolbar when applicable, scroll position persistence per document, edge-to-edge insets done right. The renderer body is whichever `DocumentRenderer` the dispatch resolves. Sub-step checkboxes filled in once the renderer interface is locked.
+Goal: the screen the user lands on when they tap a document. Top bar (back, title, find-in-doc, share, overflow), scroll position persistence per document, edge-to-edge insets handled. The renderer body is dispatched through the `DocumentRenderer` open/closed interface (R.X.9) via a `FormatRegistry`; until per-format renderers ship (Phase D+), every format falls back to `PlaceholderRenderer`. Reader-side controllers split along their natural axes from day one per R.C — no god `ReaderController`.
+
+- [x] **C.1** `DocumentRenderer` + `DocumentBytesSource` + `DocumentHandle` interfaces in `format/api/`. Narrow 3-method renderer (open / Body / extractTitle); per-format `DocumentHandle` subtypes; `AutoCloseable`.
+- [x] **C.2** `FormatRegistry` + `CompiledFormatRegistry` in `format/registry/`. Open/closed dispatch — adding a format is one map entry in `AppGraph`, no `when (format)` switches in the reader.
+- [x] **C.3** `PlaceholderRenderer` in `format/placeholder/`. Renders a polite "not yet implemented" message + view-info + back-to-library affordance. Backstop for every unimplemented format.
+- [x] **C.4** Per-axis reader controllers in `ui/reader/control/`: `ReaderStateProjector` (sealed `ReaderState`), `ScrollPersistence`, `FindInDocCommands`, `ShareExportCommands`. Each in its own file. `AnnotationCommands` not shipped — Phase G+ closes that surface.
+- [x] **C.5** Reader chrome split per R.D: `ReaderScreen` orchestrator + `ReaderTopBar` + `ReaderFindPanel` + `ReaderBody` + `ReaderErrorState`. None past 250 LOC; orchestrator under 200.
+- [x] **C.6** Nav wired — `LibraryScreen` card-tap routes through `ReaderRoute(documentId)`; back returns to library. Title resolves from `DocumentHandle.title` (no longer passed through the route).
+- [x] **C.7** `AppGraph` exposes `formatRegistry`, `readerStateProjector`, `scrollPersistence`, `findInDocCommandsFactory`, `shareExportCommands`.
+- [x] **C.8** `Setting<T>` value type introduced in `data/settings/` (first land in pageboy, mirrors whisperboy's R.B.1). `ReaderSettings` facet with one placeholder entry (`continuousScrolling: Boolean`, default true). Reader section added to the settings catalog. R.B.1 + R.B.2 ticked.
+- [x] **C.9** Tests: `FormatRegistryTest`, `PlaceholderRendererTest`, `ReaderStateProjectorTest`, `ScrollPersistenceTest`, `FindInDocCommandsTest`, `ReaderScreenSmokeTest`, `ReaderTopBarTest`.
+- [x] **C.10** Build green — `:app:assembleDebug` + `:app:testDebugUnitTest` both pass. Pre-merge checklist (8 items) PASS.
+- [x] **C.11** Smoke on `emulator-5554` — reader chrome + placeholder body confirmed via screencap at `/tmp/pageboy-C-reader-placeholder.png`.
 
 ---
 

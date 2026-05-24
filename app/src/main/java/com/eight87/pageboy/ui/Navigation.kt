@@ -32,5 +32,11 @@ import kotlinx.serialization.Serializable
 /** Phase B — sub-route inside Settings → Library → Source folders. */
 @Serializable data object SettingsLibraryFoldersRoute : NavKey
 
-/** Phase B — placeholder reader route. Real reader is Phase C+. */
-@Serializable data class ReaderRoute(val documentId: String, val title: String) : NavKey
+/**
+ * Phase C — reader route. Title resolves through the
+ * `ReaderStateProjector` from the `DocumentHandle.title` once the
+ * document opens; the route carries only the id so a reader-side rename
+ * (or a renderer that surfaces a different title than the entity) gets
+ * picked up automatically.
+ */
+@Serializable data class ReaderRoute(val documentId: String) : NavKey

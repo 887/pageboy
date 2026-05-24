@@ -3,10 +3,13 @@ package com.eight87.pageboy.ui.settings
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import com.eight87.pageboy.R
 
 /**
@@ -40,6 +43,38 @@ internal fun NavigateRow(
     label = stringResource(entry.labelRes),
     subtitle = entry.subtitleRes?.let { stringResource(it) },
     onClick = onClick,
+    modifier = modifier,
+  )
+}
+
+/**
+ * Phase C.8 — renders a catalog entry as a row with a trailing Switch
+ * bound to a Boolean [Setting][com.eight87.pageboy.data.settings.Setting].
+ * Mirror of [NavigateRow] for `RowKind.Toggle` entries.
+ */
+@Composable
+internal fun ToggleRow(
+  entry: SettingsCatalogEntry,
+  checked: Boolean,
+  onCheckedChange: (Boolean) -> Unit,
+  modifier: Modifier = Modifier,
+  switchTestTag: String? = null,
+) {
+  SettingsRow(
+    id = entry.id,
+    icon = entry.icon,
+    label = stringResource(entry.labelRes),
+    subtitle = entry.subtitleRes?.let { stringResource(it) },
+    trailing = {
+      val switchModifier = switchTestTag?.let { tag ->
+        Modifier.semantics { testTag = tag }
+      } ?: Modifier
+      Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = switchModifier,
+      )
+    },
     modifier = modifier,
   )
 }

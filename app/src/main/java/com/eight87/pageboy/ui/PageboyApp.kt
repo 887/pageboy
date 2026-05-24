@@ -41,8 +41,12 @@ import com.eight87.pageboy.data.library.LibraryRescanCoordinator
 import com.eight87.pageboy.data.library.LibraryTab
 import com.eight87.pageboy.data.library.LibraryUiSettings
 import com.eight87.pageboy.data.library.PersistedUriPermissionStore
+import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.ui.library.LibraryScreen
 import com.eight87.pageboy.ui.reader.ReaderScreen
+import com.eight87.pageboy.ui.reader.control.FindInDocCommands
+import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
+import com.eight87.pageboy.ui.reader.control.ShareExportCommands
 import com.eight87.pageboy.ui.settings.AboutScreen
 import com.eight87.pageboy.ui.settings.LicensesScreen
 import com.eight87.pageboy.ui.settings.SettingsScreen
@@ -92,6 +96,10 @@ fun PageboyApp(
   val effectiveUiSettings = libraryUiSettings ?: appGraph?.libraryUiSettings
   val effectiveCoordinator = libraryRescanCoordinator ?: appGraph?.libraryRescanCoordinator
   val effectiveRootStore = persistedUriPermissionStore ?: appGraph?.persistedUriPermissionStore
+  val effectiveProjector: ReaderStateProjector? = appGraph?.readerStateProjector
+  val effectiveFormatRegistry: FormatRegistry? = appGraph?.formatRegistry
+  val effectiveShareCommands: ShareExportCommands? = appGraph?.shareExportCommands
+  val findFactory: (() -> FindInDocCommands)? = appGraph?.findInDocCommandsFactory
 
   // Touch the coordinator so the lazy block runs and start() fires.
   LaunchedEffect(effectiveCoordinator) { /* trigger lazy init */ }
@@ -175,7 +183,7 @@ fun PageboyApp(
               libraryRescanCoordinator = effectiveCoordinator,
               onDocumentTap = { doc ->
                 scope.launch { effectiveDocSource.recordOpen(doc.documentId) }
-                backStack.add(ReaderRoute(doc.documentId, doc.title))
+                backStack.add(ReaderRoute(doc.documentId))
               },
             )
           } else {
@@ -207,6 +215,7 @@ fun PageboyApp(
             onAbout = { backStack.add(SettingsAboutRoute) },
             onLibraryFolders = { backStack.add(SettingsLibraryFoldersRoute) },
             onRescanNow = { effectiveCoordinator?.requestRescan() },
+            readerSettings = appGraph?.readerSettings,
           )
         }
         entry<SettingsAboutRoute> {
@@ -227,10 +236,21 @@ fun PageboyApp(
           }
         }
         entry<ReaderRoute> { route ->
-          ReaderScreen(
-            title = route.title,
-            onBack = { backStack.removeLastOrNull() },
-          )
+          if (effectiveProjector != null && effectiveFormatRegistry != null &&
+            effectiveShareCommands != null && findFactory != null
+          ) {
+            // One FindInDocCommands per reader instance — find state is
+            // per-document, see AppGraph.findInDocCommandsFactory.
+            val find = remember(route.documentId) { findFactory() }
+            ReaderScreen(
+              documentId = route.documentId,
+              readerStateProjector = effectiveProjector,
+              formatRegistry = effectiveFormatRegistry,
+              findInDocCommands = find,
+              shareExportCommands = effectiveShareCommands,
+              onBack = { backStack.removeLastOrNull() },
+            )
+          }
         }
       },
     )

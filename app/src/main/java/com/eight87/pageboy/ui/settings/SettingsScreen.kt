@@ -15,8 +15,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import com.eight87.pageboy.R
+import com.eight87.pageboy.data.settings.ReaderSettings
 import com.eight87.pageboy.ui.settings.sections.LibraryCatalogIds
+import com.eight87.pageboy.ui.settings.sections.ReaderCatalogIds
+import kotlinx.coroutines.launch
 
 /**
  * Settings root page. Renders the grouped-cards layout that every other
@@ -33,7 +39,15 @@ fun SettingsScreen(
   onAbout: () -> Unit,
   onLibraryFolders: () -> Unit = {},
   onRescanNow: () -> Unit = {},
+  readerSettings: ReaderSettings? = null,
 ) {
+  val scope = rememberCoroutineScope()
+  // Reader settings — null when the SettingsScreen is rendered without
+  // the AppGraph (e.g. the legacy MainScreenSmokeTest). The Reader
+  // section renders only when readerSettings is supplied.
+  val continuousScrolling = readerSettings?.continuousScrolling
+  val continuousScrollingValue by (continuousScrolling?.flow
+    ?: kotlinx.coroutines.flow.flowOf(true)).collectAsState(initial = true)
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -90,6 +104,37 @@ fun SettingsScreen(
           }
         }
       }
+
+    // Phase C.8 — Reader section.
+    if (readerSettings != null) {
+      SettingsCatalog.bySection(Section.Reader)
+        .groupBy { it.group }
+        .forEach { (group, items) ->
+          SettingsCard(
+            title = groupTitleFor(group.labelRes),
+            modifier = Modifier.padding(horizontal = SettingsDimens.PagePadding),
+          ) {
+            items.forEachIndexed { index, entry ->
+              when (entry.id) {
+                ReaderCatalogIds.ID_CONTINUOUS_SCROLL -> {
+                  ToggleRow(
+                    entry = entry,
+                    checked = continuousScrollingValue,
+                    onCheckedChange = { v ->
+                      continuousScrolling?.let { setting ->
+                        scope.launch { setting.set(v) }
+                      }
+                    },
+                    switchTestTag = "settings_reader_continuous_switch",
+                  )
+                }
+                else -> NavigateRow(entry = entry, onClick = {})
+              }
+              if (index < items.size - 1) SettingsRowDivider()
+            }
+          }
+        }
+    }
 
     Spacer(modifier = Modifier.height(24.dp))
   }

@@ -8,6 +8,7 @@ import androidx.room.Room
 import com.eight87.pageboy.data.library.AndroidLibraryRescanCoordinator
 import com.eight87.pageboy.data.library.AndroidLibraryUiSettings
 import com.eight87.pageboy.data.library.AndroidPersistedUriPermissionStore
+import com.eight87.pageboy.data.library.DocumentFormat
 import com.eight87.pageboy.data.library.DocumentSource
 import com.eight87.pageboy.data.library.LibraryDatabase
 import com.eight87.pageboy.data.library.LibraryRepository
@@ -15,6 +16,19 @@ import com.eight87.pageboy.data.library.LibraryRescanCoordinator
 import com.eight87.pageboy.data.library.LibraryUiSettings
 import com.eight87.pageboy.data.library.PersistedUriPermissionStore
 import com.eight87.pageboy.data.library.SafLibraryScanner
+import com.eight87.pageboy.data.settings.AndroidReaderSettings
+import com.eight87.pageboy.data.settings.ReaderSettings
+import com.eight87.pageboy.format.api.DocumentRenderer
+import com.eight87.pageboy.format.registry.CompiledFormatRegistry
+import com.eight87.pageboy.format.registry.FormatRegistry
+import com.eight87.pageboy.ui.reader.control.AndroidShareExportCommands
+import com.eight87.pageboy.ui.reader.control.DefaultReaderStateProjector
+import com.eight87.pageboy.ui.reader.control.DefaultScrollPersistence
+import com.eight87.pageboy.ui.reader.control.FindInDocCommands
+import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
+import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
+import com.eight87.pageboy.ui.reader.control.ScrollPersistence
+import com.eight87.pageboy.ui.reader.control.ShareExportCommands
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
@@ -87,6 +101,58 @@ class AppGraph(private val context: Context) {
     ).also { it.start() }
   }
 
+  // ---- Phase C — reader-side wiring ----
+
+  private val readerSettingsDataStore: DataStore<Preferences> =
+    context.applicationContext.readerSettingsDataStore
+
+  val readerSettings: ReaderSettings by lazy {
+    AndroidReaderSettings(readerSettingsDataStore)
+  }
+
+  /**
+   * Phase C.2 / C.7 — format registry. Phase C ships an empty map; the
+   * [CompiledFormatRegistry]'s fallback to
+   * [com.eight87.pageboy.format.placeholder.PlaceholderRenderer] covers
+   * every [DocumentFormat] until its renderer ships in Phase D–M.
+   *
+   * Per-format renderers register themselves here as their phase lands.
+   * Adding a format: one new entry. Never a `when (format)` switch in
+   * the reader (R.X.9).
+   */
+  val formatRegistry: FormatRegistry by lazy {
+    CompiledFormatRegistry(renderers = emptyMap<DocumentFormat, DocumentRenderer>())
+  }
+
+  val readerStateProjector: ReaderStateProjector by lazy {
+    DefaultReaderStateProjector(
+      applicationScope = applicationScope,
+      documentSource = libraryRepository,
+      formatRegistry = formatRegistry,
+      contentResolver = context.applicationContext.contentResolver,
+    )
+  }
+
+  val scrollPersistence: ScrollPersistence by lazy {
+    DefaultScrollPersistence(
+      applicationScope = applicationScope,
+      documentSource = libraryRepository,
+    )
+  }
+
+  /**
+   * Phase C.7 — factory per reader instance. Find state is per-document
+   * (the query, the match list, the current index) and tearing it down
+   * when leaving the reader is the cleanest semantic; AppGraph-scoped
+   * find state would survive reader-screen disposal and leak between
+   * documents.
+   */
+  val findInDocCommandsFactory: () -> FindInDocCommands = { InMemoryFindInDocCommands() }
+
+  val shareExportCommands: ShareExportCommands by lazy {
+    AndroidShareExportCommands(context.applicationContext)
+  }
+
   companion object {
     private const val DB_NAME = "pageboy_library.db"
   }
@@ -100,4 +166,9 @@ private val Context.libraryRootsDataStore: DataStore<Preferences> by preferences
 /** DataStore for library-UI preferences (sort, tab, filters). */
 private val Context.libraryUiDataStore: DataStore<Preferences> by preferencesDataStore(
   name = "library_ui",
+)
+
+/** Phase C.8 — DataStore for reader-side settings (`continuousScrolling` etc.). */
+private val Context.readerSettingsDataStore: DataStore<Preferences> by preferencesDataStore(
+  name = "reader_settings",
 )
