@@ -93,6 +93,6 @@ class MarkdownScrollPersistenceSmokeTest {
     composeRule.waitForIdle()
     // The very first snapshotFlow emission records (0, 0).
     assertTrue("expected at least one scroll record", sink.records.isNotEmpty())
-    assertEquals(0, sink.records.first().pageIndex)
+    assertEquals(0, (sink.records.first() as ScrollPosition.LazyColumn).itemIndex)
   }
 }

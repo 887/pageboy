@@ -33,6 +33,7 @@ val buildDateUtc: String = DateTimeFormatter.ISO_LOCAL_DATE
 android {
     namespace = "com.eight87.pageboy"
     compileSdk = 36
+    compileSdkExtension = 19  // required by androidx.pdf-viewer-fragment 1.0.0-alpha18
     base {
         archivesName.set("pageboy")
     }

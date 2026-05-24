@@ -85,6 +85,7 @@ class ReaderStateProjectorTest {
     override suspend fun setPinned(id: String, pinned: Boolean) {}
     override suspend fun recordOpen(id: String) {}
     override suspend fun setReadProgress(id: String, positionMs: Long, fraction: Float) {}
+    override suspend fun setScrollPosition(id: String, positionJson: String?, fraction: Float) {}
   }
 
   @Test

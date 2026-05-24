@@ -106,6 +106,6 @@ private fun PdfFindBridge(
     // The empty collect keeps the contract symmetric: when a future
     // fragment hook becomes available, the public-API toggle slots in
     // here without changing the Body() shape.
-    queryFlow.distinctUntilChanged().collect { /* TODO Phase G — toggle fragment.isTextSearchActive */ }
+    queryFlow.collect { /* TODO Phase G — toggle fragment.isTextSearchActive */ }
   }
 }
