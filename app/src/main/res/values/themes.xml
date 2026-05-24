@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Base theme is the OS Material light NoActionBar — Compose's
+      MaterialExpressiveTheme owns runtime colours / typography. The
+      Android theme is only the bootstrap surface the window opens
+      onto.
+    -->
+    <style name="Theme.Pageboy" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
