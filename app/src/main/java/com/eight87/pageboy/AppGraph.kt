@@ -21,6 +21,8 @@ import com.eight87.pageboy.data.settings.ReaderSettings
 import com.eight87.pageboy.format.api.DocumentRenderer
 import com.eight87.pageboy.format.markdown.MarkdownParser
 import com.eight87.pageboy.format.markdown.MarkdownRenderer
+import com.eight87.pageboy.format.odt.OdtRenderer
+import com.eight87.pageboy.format.ods.OdsRenderer
 import com.eight87.pageboy.format.registry.CompiledFormatRegistry
 import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.domain.render.RendererReadingPrefs
@@ -137,6 +139,14 @@ class AppGraph(private val context: Context) {
       renderers = mapOf<DocumentFormat, DocumentRenderer>(
         DocumentFormat.Markdown to MarkdownRenderer(markdownParser),
         DocumentFormat.Txt to TxtRenderer(),
+        // Phase K + L — ODF pair. Hand-rolled XmlPullParser +
+        // ZipInputStream; no third-party dep (Apache ODF Toolkit
+        // rejected on APK budget, see docs/plans/format-odt.md +
+        // format-ods.md). Each renderer owns its own internal block /
+        // cell model — no shared `RichTextDocument` / `SpreadsheetModel`
+        // cross-package (cross-format unification deferred to Phase 1.x).
+        DocumentFormat.Odt to OdtRenderer(),
+        DocumentFormat.Ods to OdsRenderer(),
       ),
     )
   }
