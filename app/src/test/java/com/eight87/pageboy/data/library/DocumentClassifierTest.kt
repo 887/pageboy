@@ -98,6 +98,73 @@ class DocumentClassifierTest {
     assertEquals(DocumentFormat.Docx, result)
   }
 
+  // Phase Q — MOBI / KF8 / AZW / AZW3 / PRC classifier cases.
+
+  @Test
+  fun `MOBI palmdb BOOK MOBI magic classifies as Mobi`() {
+    val bytes = palmDbHeader(typeCode = "BOOK", creatorCode = "MOBI")
+    val result = DocumentClassifier.classify("ebook.mobi") { ByteArrayInputStream(bytes) }
+    assertEquals(DocumentFormat.Mobi, result)
+  }
+
+  @Test
+  fun `MOBI palmdb TEXt MOBI magic classifies as Mobi`() {
+    val bytes = palmDbHeader(typeCode = "TEXt", creatorCode = "MOBI")
+    val result = DocumentClassifier.classify("legacy.prc") { ByteArrayInputStream(bytes) }
+    assertEquals(DocumentFormat.Mobi, result)
+  }
+
+  @Test
+  fun `mobi extension fallback when stream is null`() {
+    val result = DocumentClassifier.classify("guide.mobi") { null }
+    assertEquals(DocumentFormat.Mobi, result)
+  }
+
+  @Test
+  fun `azw extension fallback when stream is null`() {
+    val result = DocumentClassifier.classify("book.azw") { null }
+    assertEquals(DocumentFormat.Mobi, result)
+  }
+
+  @Test
+  fun `azw3 extension fallback when stream is null`() {
+    val result = DocumentClassifier.classify("book.azw3") { null }
+    assertEquals(DocumentFormat.Mobi, result)
+  }
+
+  @Test
+  fun `prc extension fallback when stream is null`() {
+    val result = DocumentClassifier.classify("oldebook.prc") { null }
+    assertEquals(DocumentFormat.Mobi, result)
+  }
+
+  @Test
+  fun `palmdb with non-MOBI creator stays Unknown`() {
+    val bytes = palmDbHeader(typeCode = "BOOK", creatorCode = "OTHR")
+    val result = DocumentClassifier.classify("foreign.pdb") { ByteArrayInputStream(bytes) }
+    assertEquals(DocumentFormat.Unknown, result)
+  }
+
+  /**
+   * Synth PalmDB header with the given 4-char type + creator codes at
+   * offsets 60..63 and 64..67. The earlier bytes are the PalmDB
+   * database-name field (zero-padded ASCII) plus reserved fields the
+   * sniffer doesn't read.
+   */
+  private fun palmDbHeader(typeCode: String, creatorCode: String): ByteArray {
+    require(typeCode.length == 4 && creatorCode.length == 4)
+    val buf = ByteArray(78)
+    // Database name field (offsets 0..31) — ASCII, zero-padded.
+    "TestBook".toByteArray(Charsets.US_ASCII).copyInto(buf, destinationOffset = 0)
+    // Type code at offset 60.
+    typeCode.toByteArray(Charsets.US_ASCII).copyInto(buf, destinationOffset = 60)
+    // Creator code at offset 64.
+    creatorCode.toByteArray(Charsets.US_ASCII).copyInto(buf, destinationOffset = 64)
+    // Remaining offsets 68..77 left zero (uniqueIDseed + appInfoID +
+    // sortInfoID etc. — the sniffer doesn't read them).
+    return buf
+  }
+
   /**
    * Real ZIP local-file-header magic: 0x50 0x4B 0x03 0x04. Distinct from
    * the printable "PK" string (only the first two bytes), so we encode

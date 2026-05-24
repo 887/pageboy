@@ -16,8 +16,13 @@ Formats to research, one plan each:
 - `format-odt.md` → unlocks main.md Phase K. Should also opine on whether ODT + DOCX share an intermediate model.
 - `format-ods.md` → unlocks main.md Phase L. Should opine on shared plumbing with XLSX.
 - `format-epub.md` → unlocks main.md Phase M.
+- `format-mobi.md` → unlocks main.md Phase Q. Added 2026-05-24 after
+  the initial 8-format brief as a natural fit alongside EPUB for
+  ebook coverage; hand-rolled parser (no third-party dep — every
+  Maven Central MOBI parser available is GPL or dormant), Android
+  WebView host, DRM-free only.
 
-Eight plans total. Markdown, TXT, ODT, ODS, EPUB are each likely a small plan (a single library, light dependencies, a few edge cases). DOCX + XLSX + PDF are likely larger.
+Nine plans total (eight originals + the post-launch MOBI addition). Markdown, TXT, ODT, ODS, EPUB, MOBI are each likely a small plan (a single library or a hand-rolled parser, light dependencies, a few edge cases). DOCX + XLSX + PDF are likely larger.
 
 ## The questions each plan must answer
 

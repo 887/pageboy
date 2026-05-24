@@ -22,6 +22,7 @@ import com.eight87.pageboy.format.api.DocumentRenderer
 import com.eight87.pageboy.format.docx.DocxRenderer
 import com.eight87.pageboy.format.markdown.MarkdownParser
 import com.eight87.pageboy.format.markdown.MarkdownRenderer
+import com.eight87.pageboy.format.mobi.MobiRenderer
 import com.eight87.pageboy.format.pdf.PdfRenderer
 import com.eight87.pageboy.format.odt.OdtRenderer
 import com.eight87.pageboy.format.ods.OdsRenderer
@@ -174,6 +175,13 @@ class AppGraph(private val context: Context) {
         // cross-package (cross-format unification deferred to Phase 1.x).
         DocumentFormat.Odt to OdtRenderer(),
         DocumentFormat.Ods to OdsRenderer(),
+        // Phase Q — MOBI / KF8 / AZW / AZW3 via hand-rolled parser +
+        // WebView host (no third-party dep — every Maven Central MOBI
+        // parser available in 2026 is GPL-licensed or dormant, see
+        // docs/plans/format-mobi.md "Library candidates evaluated").
+        // DRM-protected files emit a friendly error state; no
+        // decryption attempt.
+        DocumentFormat.Mobi to MobiRenderer(),
       ),
     )
   }

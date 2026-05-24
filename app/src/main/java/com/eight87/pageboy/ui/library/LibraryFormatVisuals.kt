@@ -25,6 +25,7 @@ internal fun formatLabel(format: DocumentFormat): String = when (format) {
   DocumentFormat.Txt -> "Text"
   DocumentFormat.Pdf -> "PDF"
   DocumentFormat.Epub -> "EPUB"
+  DocumentFormat.Mobi -> "MOBI"
   DocumentFormat.Docx -> "DOCX"
   DocumentFormat.Xlsx -> "XLSX"
   DocumentFormat.Odt -> "ODT"
@@ -34,7 +35,7 @@ internal fun formatLabel(format: DocumentFormat): String = when (format) {
 
 internal fun formatIcon(format: DocumentFormat): ImageVector = when (format) {
   DocumentFormat.Pdf -> Icons.Filled.PictureAsPdf
-  DocumentFormat.Epub -> Icons.Filled.Book
+  DocumentFormat.Epub, DocumentFormat.Mobi -> Icons.Filled.Book
   DocumentFormat.Markdown, DocumentFormat.Txt -> Icons.AutoMirrored.Filled.Article
   DocumentFormat.Docx, DocumentFormat.Odt -> Icons.Filled.Description
   DocumentFormat.Xlsx, DocumentFormat.Ods -> Icons.Filled.GridOn

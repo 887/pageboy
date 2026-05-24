@@ -28,6 +28,16 @@ object DocumentClassifier {
 
   private const val HEAD_BYTES = 4096
 
+  // Phase Q — MOBI / KF8 / AZW / AZW3 sit inside a PalmDB container whose
+  // first 78 bytes carry a fixed-shape header. Offsets 60..63 hold a
+  // 4-char ASCII "type code" (`BOOK` or `TEXt` for the formats we
+  // accept) and offsets 64..67 hold a 4-char ASCII "creator code"
+  // (`MOBI` for everything Mobipocket / Amazon shipped). See
+  // docs/plans/format-mobi.md "Magic bytes for classifier".
+  private const val PALMDB_TYPE_OFFSET = 60
+  private const val PALMDB_CREATOR_OFFSET = 64
+  private const val PALMDB_MIN_HEADER = 78
+
   /**
    * Classify a file by reading its first bytes via [openStream] and
    * cross-referencing [fileName]'s extension.
@@ -72,6 +82,16 @@ object DocumentClassifier {
     ) {
       return DocumentFormat.Pdf
     }
+    // Phase Q — PalmDB / MOBI sniff. We do this BEFORE the ZIP check
+    // because PalmDB and ZIP magics never collide (offset-0 of PalmDB
+    // is the database name, not `PK\x03\x04`).
+    if (head.size >= PALMDB_MIN_HEADER) {
+      val type = asciiAt(head, PALMDB_TYPE_OFFSET, len = 4)
+      val creator = asciiAt(head, PALMDB_CREATOR_OFFSET, len = 4)
+      if ((type == "BOOK" || type == "TEXt") && creator == "MOBI") {
+        return DocumentFormat.Mobi
+      }
+    }
     if (head.size >= 4 && head[0] == 0x50.toByte() && head[1] == 0x4B.toByte() &&
       head[2] == 0x03.toByte() && head[3] == 0x04.toByte()
     ) {
@@ -101,11 +121,32 @@ object DocumentClassifier {
       "txt", "text", "log", "ini", "csv", "tsv" -> DocumentFormat.Txt
       "pdf" -> DocumentFormat.Pdf
       "epub" -> DocumentFormat.Epub
+      // Phase Q — MOBI family extensions. `.prc` is the older
+      // Palm-resource container that some pre-Amazon Mobipocket
+      // titles shipped under; the byte-level layout is identical to
+      // `.mobi`.
+      "mobi", "azw", "azw3", "prc" -> DocumentFormat.Mobi
       "docx" -> DocumentFormat.Docx
       "xlsx" -> DocumentFormat.Xlsx
       "odt" -> DocumentFormat.Odt
       "ods" -> DocumentFormat.Ods
       else -> DocumentFormat.Unknown
     }
+  }
+
+  /**
+   * Reads `len` ASCII bytes starting at `start` from [head], or returns
+   * `null` if the slice would exceed the buffer or contains a non-ASCII
+   * byte. Used by the PalmDB type/creator code sniff above.
+   */
+  private fun asciiAt(head: ByteArray, start: Int, len: Int): String? {
+    if (start + len > head.size) return null
+    val chars = CharArray(len)
+    for (i in 0 until len) {
+      val b = head[start + i].toInt() and 0xFF
+      if (b < 0x20 || b > 0x7E) return null
+      chars[i] = b.toChar()
+    }
+    return String(chars)
   }
 }
