@@ -1,6 +1,6 @@
 # pageboy — "Open with…" + filetype registration plan
 
-## Status: ✅ DONE — N.1–N.15 shipped in Phase N (see main.md). 31 new tests / 0 fail; APK delta minor (WorkManager + kotlinx.serialization JSON for source_json). Pre-merge checklist (8) all PASS.
+## Status: ✅ DONE — N.1–N.15 shipped in commit `f15754b`. 31 new tests / 0 fail; APK delta minor (WorkManager + kotlinx.serialization JSON for source_json). Pre-merge checklist (8) all PASS.
 
 This plan covers what happens when the user taps a document file in any other Android app (file manager, email attachment, browser download, messaging app, cloud-storage app) and picks pageboy from the "Complete action using" chooser. The system intent flow is well-defined; the load-bearing work is the permission lifecycle, the ad-hoc `DocumentEntity` creation for "open-with" documents that aren't in any library root, and the recents-list integration.
 

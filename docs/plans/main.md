@@ -193,7 +193,7 @@ Goal: render EPUB 2 + 3 spine, navigate by ToC, reflow at the user's font size, 
 
 ---
 
-## Phase N — share-sheet ingest + recents — _Shipped: N.1–N.15 in commit `<pending>` (see [`open-with.md`](open-with.md))_
+## Phase N — share-sheet ingest + recents — _Shipped: N.1–N.15 in commit `f15754b` (see [`open-with.md`](open-with.md))_
 
 Goal: opening any supported file from another app (file manager, email client, browser) lands in pageboy via a `content://` intent, gets resolved to a `DocumentEntity` (creating one for the ad-hoc URI), and shows the recents list on the next cold start so the user can find what they opened last week.
 
