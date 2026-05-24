@@ -122,7 +122,7 @@ files emitted via email / file manager / browser download.
 - **CR/LF normalization.** PalmDOC content may have mixed line endings;
   WebView handles whatever HTML we give it.
 
-## Phase Q — implementation sub-steps — _Shipped: Q.1–Q.9 in commit `<pending>`_
+## Phase Q — implementation sub-steps — _Shipped: Q.1–Q.9 in commit `873c56b`_
 
 (Phase Q = MOBI — letters A through P already in use; Q is the next
 unused letter after Phase O release-pipeline lands. Plan files

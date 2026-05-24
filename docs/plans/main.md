@@ -205,7 +205,7 @@ Goal: `scripts/build-release-apk.sh` + the self-disabling `.github/workflows/rel
 
 ---
 
-## Phase Q — MOBI renderer _(added 2026-05-24, see [`format-mobi.md`](format-mobi.md))_ — _Shipped: Q.1–Q.9 in commit `<pending>`_
+## Phase Q — MOBI renderer _(added 2026-05-24, see [`format-mobi.md`](format-mobi.md))_ — _Shipped: Q.1–Q.9 in commit `873c56b`_
 
 Goal: read DRM-free MOBI / KF8 / AZW / AZW3 / PRC ebooks. Hand-rolled
 parser (no third-party dep — every Maven Central MOBI parser in 2026
