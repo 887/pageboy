@@ -19,6 +19,7 @@ import com.eight87.pageboy.data.library.SafLibraryScanner
 import com.eight87.pageboy.data.settings.AndroidReaderSettings
 import com.eight87.pageboy.data.settings.ReaderSettings
 import com.eight87.pageboy.format.api.DocumentRenderer
+import com.eight87.pageboy.format.docx.DocxRenderer
 import com.eight87.pageboy.format.markdown.MarkdownParser
 import com.eight87.pageboy.format.markdown.MarkdownRenderer
 import com.eight87.pageboy.format.pdf.PdfRenderer
@@ -26,6 +27,7 @@ import com.eight87.pageboy.format.registry.CompiledFormatRegistry
 import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.domain.render.RendererReadingPrefs
 import com.eight87.pageboy.format.txt.TxtRenderer
+import com.eight87.pageboy.format.xlsx.XlsxRenderer
 import com.eight87.pageboy.ui.reader.control.AndroidShareExportCommands
 import com.eight87.pageboy.ui.reader.control.DefaultReaderStateProjector
 import com.eight87.pageboy.ui.reader.control.DefaultRendererReadingPrefs
@@ -155,6 +157,13 @@ class AppGraph(private val context: Context) {
         // editing arrives in Phase G; cryptographic signing in
         // Phase H.
         DocumentFormat.Pdf to PdfRenderer(context.applicationContext.contentResolver),
+        // Phase I — DOCX via Apache POI's XWPF. Three StAX system
+        // properties were installed in `PageboyApplication.onCreate()`
+        // so POI's XMLInputFactory lookup lands on Aalto rather than
+        // failing on Android's missing javax.xml.stream factory.
+        DocumentFormat.Docx to DocxRenderer(),
+        // Phase J — XLSX via Apache POI's XSSF.
+        DocumentFormat.Xlsx to XlsxRenderer(),
       ),
     )
   }

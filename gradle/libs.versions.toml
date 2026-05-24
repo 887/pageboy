@@ -71,6 +71,26 @@ androidxFragment = "1.8.5"
 # the user has an explicit opt-in toggle.
 coil = "3.4.0"
 
+# Phase I/J — Apache POI for DOCX (XWPF) + XLSX (XSSF) renderers. POI is
+# Apache-2.0 and on the family Licensee allowlist. We pull the stock
+# poi-ooxml + poi-scratchpad and pair them with com.fasterxml:aalto-xml as
+# the StAX impl (Android ships javax.xml.stream factory absent). Three
+# `org.apache.poi.javax.xml.stream.*` system properties are set in
+# PageboyApplication.onCreate() to wire POI to aalto before any
+# XMLInputFactory lookup. See docs/plans/format-{docx,xlsx}.md.
+#
+# Why not the centic9/poi-on-android `poishadow-all` rebuild: that project
+# ships a downloadable jar but no Maven artifact; vendoring it into
+# buildSrc is heavier than the version-pinned stock POI approach which now
+# works on Android with the StAX bootstrap + a couple of packaging
+# excludes for the duplicate-license META-INF jank XmlBeans ships.
+poi = "5.5.1"
+aaltoXml = "1.3.3"
+# excel-streaming-reader (formerly monitorjbl, now pjfanning/excel-streaming-reader
+# — the active maintained fork). Layered on top of POI for windowed row
+# reading on large XLSX workbooks. Apache-2.0.
+xlsxStreamer = "5.2.0"
+
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
@@ -142,6 +162,11 @@ androidx-fragment-compose = { module = "androidx.fragment:fragment-compose", ver
 # coil-android transitively; we depend only on the binding so the
 # overall surface stays small.
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+# Phase I/J — Apache POI OOXML + XmlBeans + aalto StAX. All Apache-2.0.
+poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poi" }
+poi-scratchpad = { module = "org.apache.poi:poi-scratchpad", version.ref = "poi" }
+aalto-xml = { module = "com.fasterxml:aalto-xml", version.ref = "aaltoXml" }
+xlsx-streamer = { module = "com.github.pjfanning:excel-streaming-reader", version.ref = "xlsxStreamer" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
