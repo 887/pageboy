@@ -46,6 +46,7 @@ import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.ui.library.LibraryScreen
 import com.eight87.pageboy.ui.reader.ReaderScreen
 import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
+import com.eight87.pageboy.ui.reader.control.InMemorySigningCommands
 import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
 import com.eight87.pageboy.ui.reader.control.ScrollPersistence
 import com.eight87.pageboy.ui.reader.control.ShareExportCommands
@@ -104,6 +105,7 @@ fun PageboyApp(
   val findFactory: (() -> InMemoryFindInDocCommands)? = appGraph?.findInDocCommandsFactory
   val effectiveScrollPersistence: ScrollPersistence? = appGraph?.scrollPersistence
   val effectiveReadingPrefs: RendererReadingPrefs? = appGraph?.rendererReadingPrefs
+  val signingFactory: (() -> InMemorySigningCommands)? = appGraph?.signingCommandsFactory
 
   // Touch the coordinator so the lazy block runs and start() fires.
   LaunchedEffect(effectiveCoordinator) { /* trigger lazy init */ }
@@ -220,6 +222,13 @@ fun PageboyApp(
             onLibraryFolders = { backStack.add(SettingsLibraryFoldersRoute) },
             onRescanNow = { effectiveCoordinator?.requestRescan() },
             readerSettings = appGraph?.readerSettings,
+            signingSettings = appGraph?.signingSettings,
+            // Phase H.6 — "Manage" and "Reset" sub-screens land when
+            // the multi-identity story justifies a dedicated sub-page;
+            // v1's data layer + Keystore APIs already support the
+            // operations, the chrome routes are just deferred.
+            onManageSigningKeys = { /* TODO Phase H.6 sub-screen */ },
+            onResetSigningKeys = { /* TODO Phase H.6 confirmation dialog */ },
           )
         }
         entry<SettingsAboutRoute> {
@@ -247,6 +256,12 @@ fun PageboyApp(
             // One FindInDocCommands per reader instance — find state is
             // per-document, see AppGraph.findInDocCommandsFactory.
             val find = remember(route.documentId) { findFactory() }
+            // Phase H — per-reader signing commands. The sheet is
+            // rendered above PdfBody by ReaderScreen; production
+            // wiring of the adapter (Pkcs12 / Keystore / PadesSigner)
+            // happens inside ReaderScreen via the AppGraph passed
+            // through `signingCommands`.
+            val signing = remember(route.documentId) { signingFactory?.invoke() }
             ReaderScreen(
               documentId = route.documentId,
               readerStateProjector = effectiveProjector,
@@ -256,6 +271,7 @@ fun PageboyApp(
               scrollPersistence = effectiveScrollPersistence,
               readingPrefs = effectiveReadingPrefs,
               onBack = { backStack.removeLastOrNull() },
+              signingCommands = signing,
             )
           }
         }

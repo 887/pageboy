@@ -107,6 +107,28 @@ xlsxStreamer = "5.2.0"
 readium = "3.2.0"
 # 2.1.5+ required by Readium 3.2.0 AAR metadata gate.
 desugarJdkLibs = "2.1.5"
+# Phase H — PDF signing. OpenPDF (MPL-2.0 or LGPL-2.1+; we pick MPL-2.0
+# already on the family Licensee allowlist) is the PDF writer that
+# computes /ByteRange + the signature dictionary; Bouncy Castle
+# (bcprov-jdk18on + bcpkix-jdk18on) is the JCA provider + CMS
+# SignedData generator (PAdES-B-B, subfilter ETSI.CAdES.detached).
+#
+# Bouncy Castle SPDX: the project publishes under what they call "an
+# adaptation of the MIT X11 License" — see https://bouncycastle.org/licence.html
+# and the LICENSE.html inside the bcprov-jdk18on jar. Licensee maps
+# the project's POM declaration to a non-SPDX URL, so the family
+# allowlist gets an explicit `allowDependency` entry per artifact
+# in app/build.gradle.kts rather than a new SPDX `allow(...)` call.
+# (The text itself is functionally MIT; treating it as MIT for the
+# in-app LicensesScreen is correct, but Licensee can't auto-classify
+# the bouncycastle.org URL and we don't want to lie via `allowUrl`.)
+#
+# Versions current per 2026 maintenance line:
+#   * org.bouncycastle:bcprov-jdk18on:1.81 (Aug 2025)
+#   * org.bouncycastle:bcpkix-jdk18on:1.81
+#   * com.github.librepdf:openpdf:2.0.4 (May 2025 — locked per format-pdf.md)
+openpdf = "2.0.4"
+bouncyCastle = "1.81"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -193,6 +215,11 @@ readium-shared = { module = "org.readium.kotlin-toolkit:readium-shared", version
 readium-streamer = { module = "org.readium.kotlin-toolkit:readium-streamer", version.ref = "readium" }
 readium-navigator = { module = "org.readium.kotlin-toolkit:readium-navigator", version.ref = "readium" }
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
+# Phase H — OpenPDF + Bouncy Castle for visual-stamp burn-in (Phase H.4)
+# + PAdES-B-B cryptographic signing (Phase H.5). See format-pdf.md §3.2.
+openpdf-core = { module = "com.github.librepdf:openpdf", version.ref = "openpdf" }
+bouncycastle-prov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncyCastle" }
+bouncycastle-pkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncyCastle" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

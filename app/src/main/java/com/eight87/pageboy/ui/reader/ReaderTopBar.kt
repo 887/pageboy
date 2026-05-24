@@ -58,6 +58,8 @@ internal fun ReaderTopBar(
   // visually identical.
   tocAvailable: Boolean = false,
   onOpenToc: () -> Unit = {},
+  showSignAction: Boolean = false,
+  onSign: () -> Unit = {},
 ) {
   var overflowOpen by remember { mutableStateOf(false) }
   TopAppBar(
@@ -122,10 +124,10 @@ internal fun ReaderTopBar(
         expanded = overflowOpen,
         onDismissRequest = { overflowOpen = false },
       ) {
+        // Phase M.7 — capability-gated "Table of contents…" entry,
+        // surfaced when the resolved DocumentHandle.tocAvailable is
+        // true (currently only EPUB).
         if (tocAvailable) {
-          // Phase M.7 — capability-gated "Table of contents…" entry,
-          // surfaced only when the resolved DocumentHandle.tocAvailable
-          // is true (currently only EPUB).
           DropdownMenuItem(
             text = { Text(stringResource(R.string.reader_overflow_toc_label)) },
             onClick = {
@@ -134,10 +136,22 @@ internal fun ReaderTopBar(
             },
             modifier = Modifier.semantics { testTag = "reader_overflow_toc_item" },
           )
-        } else {
-          // Phase C shipped the menu with a single "no actions yet"
-          // entry. Phase G+ adds annotation / bookmark / signature
-          // entries here.
+        }
+        // Phase H — single entry point into the sign sheet; visual
+        // stamp vs cryptographic signature picked inside the sheet.
+        // PDF-only in v1.
+        if (showSignAction) {
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.reader_overflow_sign_label)) },
+            onClick = {
+              overflowOpen = false
+              onSign()
+            },
+            modifier = Modifier.semantics { testTag = "reader_overflow_sign" },
+          )
+        }
+        // Phase C placeholder — kept for formats with no actions in v1.
+        if (!tocAvailable && !showSignAction) {
           DropdownMenuItem(
             text = { Text(stringResource(R.string.reader_overflow_empty_label)) },
             onClick = { overflowOpen = false },

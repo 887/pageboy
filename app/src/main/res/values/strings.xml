@@ -140,6 +140,41 @@
     <string name="settings_reader_continuous_label">Continuous scrolling</string>
     <string name="settings_reader_continuous_subtitle">Treat the document as one long scroll instead of paginated.</string>
 
+    <!-- Phase H — signing flow. -->
+    <string name="reader_overflow_sign_label">Sign…</string>
+    <string name="sign_sheet_title">Sign this PDF</string>
+    <string name="sign_sheet_prompt">Pick how to sign.</string>
+    <string name="sign_sheet_visual_label">Visual stamp</string>
+    <string name="sign_sheet_visual_subtitle">Hand-draw a signature, then place it on the page.</string>
+    <string name="sign_sheet_crypto_label">Cryptographic signature (PAdES-B-B)</string>
+    <string name="sign_sheet_crypto_subtitle">Tamper-evident PDF signature using a device key or imported certificate.</string>
+    <string name="sign_sheet_cancel">Cancel</string>
+    <string name="sign_keys_keystore_label">Device key (Android Keystore, EC P-256)</string>
+    <string name="sign_keys_keystore_subtitle">Self-signed — good for personal audit trails.</string>
+    <string name="sign_keys_p12_label">Imported certificate (.p12 / .pfx)</string>
+    <string name="sign_keys_p12_subtitle">Use a certificate from your CA or identity card.</string>
+    <string name="sign_sheet_state_drawing">Draw your signature, then tap Done.</string>
+    <string name="sign_sheet_state_placing">Tap the PDF to place the stamp.</string>
+    <string name="sign_sheet_state_key_select">Select a key source.</string>
+    <string name="sign_sheet_state_signing">Signing the PDF…</string>
+    <string name="sign_sheet_state_success">Signed PDF saved.</string>
+    <string name="sign_sheet_state_failed">Signing failed: %1$s</string>
+
+    <!-- Phase H.6 — Signing settings section. -->
+    <string name="settings_group_signing_keys">Signing</string>
+    <string name="settings_signing_default_source_label">Default key source</string>
+    <string name="settings_signing_default_source_subtitle">Pick the key the sign sheet defaults to.</string>
+    <string name="settings_signing_manage_keys_label">Manage signing keys</string>
+    <string name="settings_signing_manage_keys_subtitle">Device key alias + imported .p12 references.</string>
+    <string name="settings_signing_reset_keys_label">Reset signing keys</string>
+    <string name="settings_signing_reset_keys_subtitle">Wipes the device key and imported .p12 references.</string>
+    <string name="settings_signing_timestamp_label">Add timestamp to signatures (PAdES-B-T)</string>
+    <string name="settings_signing_timestamp_subtitle">Reserved for v2 — adds an RFC 3161 timestamp to each signature.</string>
+    <string name="settings_signing_ltv_label">Long-term validation (PAdES-B-LT)</string>
+    <string name="settings_signing_ltv_subtitle">Reserved for v2 — embeds revocation material for long-term verification.</string>
+    <string name="settings_signing_default_keystore">Device key (EC P-256)</string>
+    <string name="settings_signing_default_ask">Ask each time</string>
+
     <!-- About → build-version easter egg (triple-tap reveals the ferret). -->
     <string name="settings_about_easter_egg_first">Tap 2 more times for a treat</string>
     <string name="settings_about_easter_egg_second">Tap 1 more time…</string>

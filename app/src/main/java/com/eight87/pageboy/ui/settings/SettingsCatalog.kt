@@ -6,6 +6,7 @@ import com.eight87.pageboy.R
 import com.eight87.pageboy.ui.settings.sections.LibraryEntries
 import com.eight87.pageboy.ui.settings.sections.ReaderEntries
 import com.eight87.pageboy.ui.settings.sections.RootEntries
+import com.eight87.pageboy.ui.settings.sections.SigningEntries
 
 /**
  * Where this entry sits in the settings hierarchy. The root settings
@@ -87,7 +88,7 @@ object SettingsCatalog {
   const val ID_ABOUT = "about"
 
   /** Flat aggregation across the per-section files. */
-  val entries: List<SettingsCatalogEntry> = RootEntries + LibraryEntries + ReaderEntries
+  val entries: List<SettingsCatalogEntry> = RootEntries + LibraryEntries + ReaderEntries + SigningEntries
 
   /** Look up an entry by id. Throws if missing — IDs are compile-time
    *  stable. */

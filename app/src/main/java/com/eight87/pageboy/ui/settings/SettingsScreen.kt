@@ -20,8 +20,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import com.eight87.pageboy.R
 import com.eight87.pageboy.data.settings.ReaderSettings
+import com.eight87.pageboy.data.signing.DefaultKeySource
+import com.eight87.pageboy.data.signing.SigningSettings
 import com.eight87.pageboy.ui.settings.sections.LibraryCatalogIds
 import com.eight87.pageboy.ui.settings.sections.ReaderCatalogIds
+import com.eight87.pageboy.ui.settings.sections.SigningCatalogIds
 import kotlinx.coroutines.launch
 
 /**
@@ -40,6 +43,9 @@ fun SettingsScreen(
   onLibraryFolders: () -> Unit = {},
   onRescanNow: () -> Unit = {},
   readerSettings: ReaderSettings? = null,
+  signingSettings: SigningSettings? = null,
+  onManageSigningKeys: () -> Unit = {},
+  onResetSigningKeys: () -> Unit = {},
 ) {
   val scope = rememberCoroutineScope()
   // Reader settings — null when the SettingsScreen is rendered without
@@ -126,6 +132,59 @@ fun SettingsScreen(
                       }
                     },
                     switchTestTag = "settings_reader_continuous_switch",
+                  )
+                }
+                else -> NavigateRow(entry = entry, onClick = {})
+              }
+              if (index < items.size - 1) SettingsRowDivider()
+            }
+          }
+        }
+    }
+
+    // Phase H.6 — Signing section. Renders only when signingSettings
+    // is wired (production: AppGraph.signingSettings; tests: omitted to
+    // keep the catalog smoke tests stable).
+    if (signingSettings != null) {
+      val defaultKeySource by signingSettings.defaultKeySource.flow
+        .collectAsState(initial = DefaultKeySource.KEYSTORE)
+      SettingsCatalog.bySection(Section.Signing)
+        .groupBy { it.group }
+        .forEach { (group, items) ->
+          SettingsCard(
+            title = groupTitleFor(group.labelRes),
+            modifier = Modifier.padding(horizontal = SettingsDimens.PagePadding),
+          ) {
+            items.forEachIndexed { index, entry ->
+              when (entry.id) {
+                SigningCatalogIds.ID_DEFAULT_KEY_SOURCE -> {
+                  // Two-state picker — toggle behaves like a binary
+                  // picker until a future multi-state picker DSL lands.
+                  ToggleRow(
+                    entry = entry,
+                    checked = defaultKeySource == DefaultKeySource.KEYSTORE,
+                    onCheckedChange = { v ->
+                      scope.launch {
+                        signingSettings.defaultKeySource.set(
+                          if (v) DefaultKeySource.KEYSTORE
+                          else DefaultKeySource.ASK_EACH_TIME,
+                        )
+                      }
+                    },
+                    switchTestTag = "settings_signing_default_source_switch",
+                  )
+                }
+                SigningCatalogIds.ID_MANAGE_KEYS -> NavigateRow(entry = entry, onClick = onManageSigningKeys)
+                SigningCatalogIds.ID_RESET_KEYS -> NavigateRow(entry = entry, onClick = onResetSigningKeys)
+                SigningCatalogIds.ID_TIMESTAMP_RESERVED,
+                SigningCatalogIds.ID_LTV_RESERVED -> {
+                  // Reserved for v2 — render as a disabled toggle that
+                  // surfaces the roadmap without firing an action.
+                  ToggleRow(
+                    entry = entry,
+                    checked = false,
+                    onCheckedChange = { /* reserved — no-op */ },
+                    switchTestTag = "settings_signing_${entry.id}_switch",
                   )
                 }
                 else -> NavigateRow(entry = entry, onClick = {})
