@@ -137,4 +137,10 @@
     <string name="settings_group_reader_display">Display</string>
     <string name="settings_reader_continuous_label">Continuous scrolling</string>
     <string name="settings_reader_continuous_subtitle">Treat the document as one long scroll instead of paginated.</string>
+
+    <!-- About → build-version easter egg (triple-tap reveals the ferret). -->
+    <string name="settings_about_easter_egg_first">Tap 2 more times for a treat</string>
+    <string name="settings_about_easter_egg_second">Tap 1 more time…</string>
+    <string name="settings_about_easter_egg_ferret_cd">pageboy ferret mascot in a hoodie, sitting in a reading nook</string>
+    <string name="settings_about_easter_egg_dismiss_cd">Dismiss easter egg</string>
 </resources>

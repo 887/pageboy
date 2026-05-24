@@ -2,7 +2,9 @@ package com.eight87.pageboy.ui.settings
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -19,32 +21,48 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import com.eight87.pageboy.BuildConfig
 import com.eight87.pageboy.R
+import kotlinx.coroutines.launch
 
 /**
  * About sub-page. Renders inside the same M3 Expressive grouped
  * cards (`SettingsCard` / `SettingsRow`) used elsewhere so the chrome
  * lines up with every other settings surface.
  *
- * Layout (Phase A.5 — minimal):
- *   - "Build" card: app name, version + SHA, build date.
+ * Layout:
+ *   - "Build" card: app name, version + SHA (build-version row taps
+ *     drive [EasterEggController]; three taps within five seconds
+ *     reveal a fullscreen ferret), build date.
  *   - "Source" card: GitHub repo link, MIT license note, link to the
  *     Open-source licenses sub-page.
  *
  * Per `docs/plans/ui-shell.md`, a sibling-credit card lands in a later
  * pass once the format-research phase names the open-source design-space
  * references (Markor, Librera, MuPDF viewer, Collabora Office).
- * Easter-egg controller plumbing is deferred too — the user supplies
- * the icon + image later.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +71,13 @@ fun AboutScreen(
   onLicenses: () -> Unit,
 ) {
   val context = LocalContext.current
+  val snackbarHostState = remember { SnackbarHostState() }
+  val scope = rememberCoroutineScope()
+  val easterEgg = remember { EasterEggController() }
+  var ferretVisible by remember { mutableStateOf(false) }
+
+  val easterEggFirst = stringResource(R.string.settings_about_easter_egg_first)
+  val easterEggSecond = stringResource(R.string.settings_about_easter_egg_second)
 
   val versionName = stringResource(
     R.string.settings_about_version_subtitle,
@@ -81,6 +106,7 @@ fun AboutScreen(
         },
       )
     },
+    snackbarHost = { SnackbarHost(snackbarHostState) },
   ) { innerPadding ->
     Column(
       modifier = Modifier
@@ -108,7 +134,19 @@ fun AboutScreen(
           icon = Icons.Outlined.Numbers,
           label = stringResource(R.string.settings_about_version_label),
           subtitle = versionName,
-          onClick = null,
+          onClick = {
+            when (easterEgg.tap(System.currentTimeMillis())) {
+              EasterEggController.Outcome.FirstPromptSnackbar -> scope.launch {
+                snackbarHostState.showSnackbar(easterEggFirst)
+              }
+              EasterEggController.Outcome.SecondPromptSnackbar -> scope.launch {
+                snackbarHostState.showSnackbar(easterEggSecond)
+              }
+              EasterEggController.Outcome.Reveal -> {
+                ferretVisible = true
+              }
+            }
+          },
         )
         SettingsRowDivider()
         SettingsRow(
@@ -149,6 +187,40 @@ fun AboutScreen(
           onClick = { openExternalBrowser(context, LICENSE_URL) },
         )
       }
+    }
+  }
+
+  if (ferretVisible) {
+    EasterEggFerretDialog(onDismiss = { ferretVisible = false })
+  }
+}
+
+@Composable
+private fun EasterEggFerretDialog(onDismiss: () -> Unit) {
+  Dialog(
+    onDismissRequest = onDismiss,
+    properties = DialogProperties(
+      usePlatformDefaultWidth = false,
+      dismissOnBackPress = true,
+      dismissOnClickOutside = true,
+    ),
+  ) {
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(Color.Black)
+        .clickable(onClick = onDismiss)
+        .semantics { testTag = "easter_egg_ferret_scrim" },
+      contentAlignment = Alignment.Center,
+    ) {
+      Image(
+        painter = painterResource(id = R.drawable.easter_egg_ferret),
+        contentDescription = stringResource(R.string.settings_about_easter_egg_ferret_cd),
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+          .fillMaxSize()
+          .semantics { testTag = "easter_egg_ferret_image" },
+      )
     }
   }
 }
