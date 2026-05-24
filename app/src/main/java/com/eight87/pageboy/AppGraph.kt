@@ -21,6 +21,7 @@ import com.eight87.pageboy.data.settings.ReaderSettings
 import com.eight87.pageboy.format.api.DocumentRenderer
 import com.eight87.pageboy.format.markdown.MarkdownParser
 import com.eight87.pageboy.format.markdown.MarkdownRenderer
+import com.eight87.pageboy.format.pdf.PdfRenderer
 import com.eight87.pageboy.format.registry.CompiledFormatRegistry
 import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.domain.render.RendererReadingPrefs
@@ -33,6 +34,12 @@ import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
 import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
 import com.eight87.pageboy.ui.reader.control.ScrollPersistence
 import com.eight87.pageboy.ui.reader.control.ShareExportCommands
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.disk.DiskCache
+import coil3.memory.MemoryCache
+import coil3.request.crossfade
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
@@ -57,7 +64,12 @@ class AppGraph(private val context: Context) {
       context.applicationContext,
       LibraryDatabase::class.java,
       DB_NAME,
-    ).build()
+    )
+      // Phase F.2 — v1 → v2 adds scroll_position_json TEXT column. The
+      // migration is additive (ALTER TABLE ADD COLUMN with no default,
+      // null-tolerant) so old rows preserve their per-document state.
+      .addMigrations(LibraryDatabase.MIGRATION_1_2)
+      .build()
   }
 
   private val rootsDataStore: DataStore<Preferences> =
@@ -137,6 +149,12 @@ class AppGraph(private val context: Context) {
       renderers = mapOf<DocumentFormat, DocumentRenderer>(
         DocumentFormat.Markdown to MarkdownRenderer(markdownParser),
         DocumentFormat.Txt to TxtRenderer(),
+        // Phase F.5 — view-only PDF rendering via androidx.pdf's
+        // PdfViewerFragment. ContentResolver-only constructor; the
+        // SAF URI rides through SafDocumentBytesSource. Annotation
+        // editing arrives in Phase G; cryptographic signing in
+        // Phase H.
+        DocumentFormat.Pdf to PdfRenderer(context.applicationContext.contentResolver),
       ),
     )
   }
@@ -177,6 +195,37 @@ class AppGraph(private val context: Context) {
    */
   val rendererReadingPrefs: RendererReadingPrefs by lazy {
     DefaultRendererReadingPrefs(scope = applicationScope, settings = readerSettings)
+  }
+
+  /**
+   * Phase F.4 — Coil 3 [ImageLoader] used by the markdown renderer's
+   * image inlines + standalone image blocks. Closes Phase D's image
+   * deferral (was a placeholder card).
+   *
+   * v1 deliberately disables the disk cache to keep image bytes from
+   * persisting across reader sessions (the user may open a document
+   * they don't want cached). Memory cache stays on so scrolling a
+   * markdown doc with reused images doesn't refetch on every scroll.
+   * Revisit in v1.x once an explicit opt-in toggle ships.
+   *
+   * Singleton install — the [SingletonImageLoader.setSafe] hook makes
+   * `AsyncImage(...)` resolve our configured loader without each
+   * call-site passing it explicitly. Set lazily here (vs. eagerly in
+   * `PageboyApplication`) so Robolectric tests that build a partial
+   * AppGraph don't force the install.
+   */
+  val imageLoader: ImageLoader by lazy {
+    val loader = ImageLoader.Builder(context.applicationContext as PlatformContext)
+      .crossfade(true)
+      .memoryCache {
+        MemoryCache.Builder()
+          .maxSizePercent(context.applicationContext, percent = 0.10)
+          .build()
+      }
+      // No diskCache(...) call — disk cache disabled by default in v1.
+      .build()
+    SingletonImageLoader.setSafe { loader }
+    loader
   }
 
   companion object {

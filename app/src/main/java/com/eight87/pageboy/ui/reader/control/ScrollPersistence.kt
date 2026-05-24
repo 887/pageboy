@@ -17,13 +17,21 @@ import kotlinx.coroutines.launch
  * per-format renderers both need to write, but nothing on the read side
  * cares about debounce semantics — the read-side surface is just a
  * single suspend lookup.
+ *
+ * Phase F.2 — surface accepts the sealed [ScrollPosition] (was the
+ * plain data class). Closes Phase D audit O.D.2. Persistence-side
+ * encoding goes through `ScrollPosition.encode/decode` to JSON; the
+ * Room column is a single TEXT.
  */
 interface ScrollPersistence {
 
   /**
    * Last-known scroll position for a document, or null if the document
    * hasn't been scrolled yet. Reader chrome reads this once on open to
-   * restore the user's place.
+   * restore the user's place. Returns whichever sealed variant was
+   * previously written; the renderer's `Body()` pattern-matches on the
+   * variant it knows (Markdown / TXT match `LazyColumn`, PDF matches
+   * `PdfPage`, etc.) and ignores variants it doesn't.
    */
   suspend fun lastPosition(documentId: String): ScrollPosition?
 
@@ -36,24 +44,25 @@ interface ScrollPersistence {
 }
 
 /**
- * Default [ScrollPersistence] backed by [DocumentSource.setReadProgress].
+ * Default [ScrollPersistence] backed by [DocumentSource.setScrollPosition].
  * Debounces to one write per [debounceMs] window per document.
  *
- * The debounce maps a `pageIndex` + `offsetFraction` pair onto the
- * single-value `lastReadPositionMs` + `readFraction` columns the
- * Phase B repository already exposes:
- *  - `lastReadPositionMs` = `(pageIndex.toLong() shl 20) or (offsetFraction * (1L shl 20)).toLong()`
- *    — fits a 12-bit page index + a 20-bit fractional offset into one
- *    long; renderers without pagination set `pageIndex = 0` and the
- *    encoding collapses to just the offset.
- *  - `readFraction` = float position the library card's progress bar
- *    surfaces; renderers compute it from their own context (page-count
- *    fraction for PDF, char-offset fraction for text).
+ * Phase F.2 — refactored to encode the sealed [ScrollPosition] via
+ * `ScrollPosition.encode`. The chrome's derived fraction-complete still
+ * lives on `DocumentEntity.readFraction` (per-renderer semantics — PDF
+ * uses `page / pageCount`, reflowable formats use 0).
+ *
+ * Read path: prefer the new `scroll_position_json` column when present;
+ * fall back to the legacy bit-packed `lastReadPositionMs` long for v1
+ * rows that haven't been re-written since the migration (decode as
+ * `ScrollPosition.LazyColumn` because that's what Markdown / TXT wrote
+ * pre-Phase F). This keeps user state intact across the v1→v2 upgrade.
  */
 class DefaultScrollPersistence(
   private val applicationScope: CoroutineScope,
   private val documentSource: DocumentSource,
   private val debounceMs: Long = DEFAULT_DEBOUNCE_MS,
+  private val fractionFor: (ScrollPosition) -> Float = ::defaultFractionFor,
 ) : ScrollPersistence {
 
   private val pending: MutableMap<String, ScrollPosition> = HashMap()
@@ -62,12 +71,16 @@ class DefaultScrollPersistence(
 
   override suspend fun lastPosition(documentId: String): ScrollPosition? {
     val entity = documentSource.findById(documentId) ?: return null
+    // Prefer the post-Phase F JSON encoding.
+    ScrollPosition.decode(entity.scrollPositionJson)?.let { return it }
+    // Legacy v1 fallback: bit-packed lastReadPositionMs. Pre-Phase F
+    // only reflowable renderers (Markdown / TXT) wrote here, so the
+    // decode lands as `LazyColumn`. PDF didn't ship in v1.
     val encoded = entity.lastReadPositionMs
     if (encoded == 0L && entity.readFraction == 0f) return null
-    return ScrollPosition(
-      pageIndex = (encoded shr OFFSET_BITS).toInt(),
-      offsetFraction = entity.readFraction.coerceIn(0f, 1f),
-    )
+    val itemIndex = (encoded shr OFFSET_BITS).toInt()
+    val offsetRaw = (encoded and OFFSET_MASK).toInt()
+    return ScrollPosition.LazyColumn(itemIndex = itemIndex, offset = offsetRaw)
   }
 
   override fun recordPosition(documentId: String, position: ScrollPosition) {
@@ -79,20 +92,29 @@ class DefaultScrollPersistence(
       jobs[documentId] = applicationScope.launch {
         delay(debounceMs)
         val toWrite = synchronized(lock) { pending.remove(documentId) } ?: return@launch
-        val pageOffsetEncoded =
-          (toWrite.pageIndex.toLong() shl OFFSET_BITS) or
-            (toWrite.offsetFraction.coerceIn(0f, 1f) * (1L shl OFFSET_BITS)).toLong()
-        documentSource.setReadProgress(
+        documentSource.setScrollPosition(
           id = documentId,
-          positionMs = pageOffsetEncoded,
-          fraction = toWrite.offsetFraction.coerceIn(0f, 1f),
+          positionJson = ScrollPosition.encode(toWrite),
+          fraction = fractionFor(toWrite).coerceIn(0f, 1f),
         )
       }
     }
   }
 
-  private companion object {
+  internal companion object {
     const val DEFAULT_DEBOUNCE_MS = 750L
     const val OFFSET_BITS = 20
+    const val OFFSET_MASK = (1L shl OFFSET_BITS) - 1L
+
+    /**
+     * Sensible default for the library card's progress bar. PDF reports
+     * a real fraction `page / pageCount`; reflowable formats report 0
+     * (the library card hides the progress bar when 0). Per-renderer
+     * overrides slot in via the [fractionFor] ctor param.
+     */
+    fun defaultFractionFor(position: ScrollPosition): Float = when (position) {
+      is ScrollPosition.LazyColumn -> 0f
+      is ScrollPosition.PdfPage -> position.ratio.coerceIn(0f, 1f)
+    }
   }
 }

@@ -38,6 +38,10 @@ class LibraryRepository(
     documentDao.setReadProgress(id, positionMs, fraction.coerceIn(0f, 1f))
   }
 
+  override suspend fun setScrollPosition(id: String, positionJson: String?, fraction: Float) {
+    documentDao.setScrollPosition(id, positionJson, fraction.coerceIn(0f, 1f))
+  }
+
   // ---- ScanWriter ----
 
   override suspend fun allDocumentIds(): Set<String> =
@@ -73,6 +77,10 @@ class LibraryRepository(
           lastOpenedAt = existing?.lastOpenedAt,
           lastReadPositionMs = existing?.lastReadPositionMs ?: 0L,
           readFraction = existing?.readFraction ?: 0f,
+          // Phase F.2 — preserve the JSON-encoded sealed position across
+          // rescans so a re-add of the same folder doesn't lose where
+          // the user was inside a PDF / markdown doc.
+          scrollPositionJson = existing?.scrollPositionJson,
           pinned = existing?.pinned ?: false,
           isMissing = false,
         )

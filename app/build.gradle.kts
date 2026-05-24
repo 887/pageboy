@@ -222,4 +222,22 @@ dependencies {
   implementation(libs.commonmark.ext.autolink)
   implementation(libs.commonmark.ext.footnotes)
   implementation(libs.commonmark.ext.image.attributes)
+
+  // Phase F — androidx.pdf view-side fragment + Compose interop. The
+  // pdf-viewer-fragment artifact transitively pulls pdf-viewer +
+  // pdf-document-service; we list every artifact so Licensee inventories
+  // them explicitly + version drift is surfaced in the manifest diff.
+  // Apache-2.0; minSdk 28 backport via sdk-extension < 13. No native
+  // code in our APK (Pdfium runs inside the system PdfRenderer service).
+  implementation(libs.androidx.pdf.viewer.fragment)
+  implementation(libs.androidx.pdf.viewer)
+  implementation(libs.androidx.pdf.document.service)
+  implementation(libs.androidx.fragment.compose)
+
+  // Phase F — Coil 3 (compose binding). Closes Phase D's image-rendering
+  // deferral so markdown inline + standalone images render the actual
+  // bitmap (was placeholder card). Apache-2.0; ~1 MB universal APK
+  // delta after R8. Disk cache disabled by default in v1 (see
+  // AppGraph.imageLoader) so reader sessions don't leak across users.
+  implementation(libs.coil.compose)
 }

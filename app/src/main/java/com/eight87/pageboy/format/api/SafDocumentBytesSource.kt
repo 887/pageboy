@@ -27,7 +27,14 @@ import java.io.InputStream
  */
 class SafDocumentBytesSource(
   private val contentResolver: ContentResolver,
-  private val documentUri: Uri,
+  /**
+   * Phase F.3 — visible to the package so the PDF renderer can hand
+   * the SAF URI straight to androidx.pdf's `PdfViewerFragment` without
+   * round-tripping bytes through a parcel + back. Other renderers
+   * (Markdown / TXT) stay on the `openStream()` path and never see
+   * the URI.
+   */
+  val documentUri: Uri,
   private val documentFile: DocumentFile? = null,
 ) : DocumentBytesSource {
 

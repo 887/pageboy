@@ -84,9 +84,10 @@ private fun TxtScrollRestore(
   scrollSink: RendererScrollSink,
 ) {
   LaunchedEffect(documentId) {
-    val saved = scrollSink.load() ?: return@LaunchedEffect
-    val index = saved.pageIndex.coerceAtLeast(0)
-    val offset = (saved.offsetFraction * 1000f).toInt().coerceAtLeast(0)
+    // Same pattern as Markdown — only restore `LazyColumn` variants.
+    val saved = scrollSink.load() as? ScrollPosition.LazyColumn ?: return@LaunchedEffect
+    val index = saved.itemIndex.coerceAtLeast(0)
+    val offset = saved.offset.coerceAtLeast(0)
     runCatching { listState.scrollToItem(index, scrollOffset = offset) }
   }
 }
@@ -101,12 +102,7 @@ private fun TxtScrollRecord(
     snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
       .distinctUntilChanged()
       .collect { (index, offset) ->
-        scrollSink.record(
-          ScrollPosition(
-            pageIndex = index,
-            offsetFraction = (offset.toFloat() / 1000f).coerceIn(0f, 1f),
-          ),
-        )
+        scrollSink.record(ScrollPosition.LazyColumn(itemIndex = index, offset = offset))
       }
   }
 }

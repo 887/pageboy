@@ -22,6 +22,16 @@ interface DocumentSource {
   suspend fun recordOpen(id: String)
 
   suspend fun setReadProgress(id: String, positionMs: Long, fraction: Float)
+
+  /**
+   * Phase F.2 — write the JSON-encoded `ScrollPosition` sealed variant
+   * to the document's `scroll_position_json` column + the chrome's
+   * derived fraction-complete to `read_fraction`. Used by
+   * `DefaultScrollPersistence` post-Phase F; the legacy
+   * [setReadProgress] is kept for the v1 bit-packed-long path so older
+   * call sites (and migration tests) keep compiling.
+   */
+  suspend fun setScrollPosition(id: String, positionJson: String?, fraction: Float)
 }
 
 /**
