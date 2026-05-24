@@ -90,7 +90,7 @@ Goal: walk picked SAF tree roots, classify each entry by `DocumentFormat` via ex
 
 ---
 
-## Phase C — reader chrome + DocumentRenderer + per-axis controllers
+## Phase C — reader chrome + DocumentRenderer + per-axis controllers — _Shipped: C.1–C.11 in commit `c7e1dfb`_
 
 Goal: the screen the user lands on when they tap a document. Top bar (back, title, find-in-doc, share, overflow), scroll position persistence per document, edge-to-edge insets handled. The renderer body is dispatched through the `DocumentRenderer` open/closed interface (R.X.9) via a `FormatRegistry`; until per-format renderers ship (Phase D+), every format falls back to `PlaceholderRenderer`. Reader-side controllers split along their natural axes from day one per R.C — no god `ReaderController`.
 
