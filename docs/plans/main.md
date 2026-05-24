@@ -151,7 +151,7 @@ Goal: render PDF pages, scroll smoothly through 500+ page documents, find-in-doc
 
 ---
 
-## Phase G — PDF annotation — _Shipped: G.1–G.9 (this commit; closes Phase D O.G deferral)_
+## Phase G — PDF annotation — _Shipped: G.1–G.9 in commit `573393e`; closes Phase D O.G deferral_
 
 Goal: highlight / underline / strikethrough / freehand ink / sticky-note / stamp. Annotations live in Room as overlay rows (per `docs/plans/format-pdf.md` decision (C)); the original PDF is never mutated. An explicit "Export with annotations…" reader-overflow entry bakes the rows into a PDF copy via OpenPDF (MPL-2.0) so other readers see them.
 
