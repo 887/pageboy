@@ -168,7 +168,7 @@ Goal: render EPUB 2 + 3 spine, navigate by ToC, reflow at the user's font size, 
 
 ---
 
-## Phase N — share-sheet ingest + recents _(stub — depends on Phase A.6 deep-link MIME filters landing)_
+## Phase N — share-sheet ingest + recents _(spec'd in [`open-with.md`](open-with.md); intent-filter declarations landed in Phase A.6)_
 
 Goal: opening any supported file from another app (file manager, email client, browser) lands in pageboy via a `content://` intent, gets resolved to a `DocumentEntity` (creating one for the ad-hoc URI), and shows the recents list on the next cold start so the user can find what they opened last week. Sub-steps land when Phase A.6 is closed and the team has a clearer picture of how much state the recents surface should keep.
 
