@@ -16,13 +16,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.eight87.pageboy.data.library.DocumentFormat
 import com.eight87.pageboy.domain.render.RendererReadingPrefs
 import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
+import com.eight87.pageboy.ui.reader.control.InMemorySigningCommands
 import com.eight87.pageboy.ui.reader.control.ReaderState
 import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
 import com.eight87.pageboy.ui.reader.control.ScrollPersistence
 import com.eight87.pageboy.ui.reader.control.ShareExportCommands
+import com.eight87.pageboy.ui.reader.signing.SigningSheet
 
 /**
  * Phase C.5 — reader screen orchestrator. Holds no business logic; just
@@ -54,6 +57,7 @@ fun ReaderScreen(
   scrollPersistence: ScrollPersistence,
   readingPrefs: RendererReadingPrefs,
   onBack: () -> Unit,
+  signingCommands: InMemorySigningCommands? = null,
   modifier: Modifier = Modifier,
 ) {
   val state by readerStateProjector.state.collectAsStateWithLifecycle()
@@ -80,6 +84,11 @@ fun ReaderScreen(
     is ReaderState.Failed -> ""
     else -> ""
   }
+
+  // Phase H — sign overflow shows up for PDF only. Other formats keep
+  // the Phase C "no actions yet" placeholder in the overflow menu.
+  val isPdfOpen = (state as? ReaderState.Open)?.handle?.format == DocumentFormat.Pdf
+  val showSign = isPdfOpen && signingCommands != null
 
   Column(
     modifier = modifier
@@ -111,7 +120,22 @@ fun ReaderScreen(
           )
         }
       },
+      showSignAction = showSign,
+      onSign = {
+        // Phase H — single entry point. The sheet's first sub-page
+        // picks visual vs cryptographic. Default is the cryptographic
+        // path (key-selecting); the visual-stamp path is the first
+        // sub-page of the sheet itself, not a separate entry.
+        signingCommands?.start(visualStamp = false)
+      },
     )
+    if (signingCommands != null) {
+      SigningSheet(
+        commands = signingCommands,
+        onPickKeystore = { /* AppGraph adapter wires the casual path */ },
+        onPickPkcs12 = { /* SAF picker + Pkcs12KeyProvider land in the activity */ },
+      )
+    }
     if (findPanelOpen) {
       ReaderFindPanel(
         query = findQuery,

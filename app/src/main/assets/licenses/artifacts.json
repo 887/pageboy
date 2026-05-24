@@ -2544,6 +2544,28 @@
         }
     },
     {
+        "groupId": "com.github.librepdf",
+        "artifactId": "openpdf",
+        "version": "2.0.4",
+        "name": "OpenPDF - Free and Open PDF",
+        "spdxLicenses": [
+            {
+                "identifier": "LGPL-2.1-only",
+                "name": "GNU Lesser General Public License v2.1 only",
+                "url": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1-standalone.html"
+            }
+        ],
+        "unknownLicenses": [
+            {
+                "name": "Mozilla Public License Version 2.0",
+                "url": "https://www.mozilla.org/en-US/MPL/2.0/"
+            }
+        ],
+        "scm": {
+            "url": "scm:git:https://github.com/LibrePDF/OpenPDF"
+        }
+    },
+    {
         "groupId": "com.github.pjfanning",
         "artifactId": "excel-streaming-reader",
         "version": "5.2.0",
@@ -2977,6 +2999,51 @@
         ],
         "scm": {
             "url": "https://svn.apache.org/repos/asf/xmlbeans/"
+        }
+    },
+    {
+        "groupId": "org.bouncycastle",
+        "artifactId": "bcpkix-jdk18on",
+        "version": "1.81",
+        "name": "Bouncy Castle PKIX, CMS, EAC, TSP, PKCS, OCSP, CMP, and CRMF APIs",
+        "unknownLicenses": [
+            {
+                "name": "Bouncy Castle Licence",
+                "url": "https://www.bouncycastle.org/licence.html"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/bcgit/bc-java"
+        }
+    },
+    {
+        "groupId": "org.bouncycastle",
+        "artifactId": "bcprov-jdk18on",
+        "version": "1.81.1",
+        "name": "Bouncy Castle Provider",
+        "unknownLicenses": [
+            {
+                "name": "Bouncy Castle Licence",
+                "url": "https://www.bouncycastle.org/licence.html"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/bcgit/bc-java"
+        }
+    },
+    {
+        "groupId": "org.bouncycastle",
+        "artifactId": "bcutil-jdk18on",
+        "version": "1.81.1",
+        "name": "Bouncy Castle ASN.1 Extension and Utility APIs",
+        "unknownLicenses": [
+            {
+                "name": "Bouncy Castle Licence",
+                "url": "https://www.bouncycastle.org/licence.html"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/bcgit/bc-java"
         }
     },
     {

@@ -136,6 +136,34 @@ licensee {
     // license via opensource.org's new URL path (/license/mit instead
     // of /licenses/MIT); whitelist that URL so Licensee maps it to MIT.
     allowUrl("https://opensource.org/license/mit")
+    // Phase H — Bouncy Castle ships its "adaptation of the MIT X11
+    // License" via the bouncycastle.org/licence.html URL; Licensee
+    // can't auto-map that to an SPDX id, so each artifact gets an
+    // explicit allowDependency entry. Text is functionally MIT (see
+    // libs.versions.toml comment); we treat it as such for the
+    // bundled LicensesScreen surface but cannot claim the SPDX
+    // mapping in the build-time inventory.
+    // bcprov resolves to 1.81.1 transitively via bcutil's [1.81,1.82)
+    // range; bcpkix + bcutil stay on 1.81.
+    allowDependency("org.bouncycastle", "bcprov-jdk18on", "1.81.1") {
+        because("Bouncy Castle MIT X11-style license (bouncycastle.org/licence.html). " +
+                "Functionally MIT; Licensee cannot auto-map the project URL.")
+    }
+    allowDependency("org.bouncycastle", "bcpkix-jdk18on", "1.81") {
+        because("Bouncy Castle MIT X11-style license (bouncycastle.org/licence.html). " +
+                "Functionally MIT; Licensee cannot auto-map the project URL.")
+    }
+    allowDependency("org.bouncycastle", "bcutil-jdk18on", "1.81.1") {
+        because("Bouncy Castle MIT X11-style license (bouncycastle.org/licence.html). " +
+                "Functionally MIT; Licensee cannot auto-map the project URL.")
+    }
+    // Phase H — OpenPDF 2.0.4 dual-licenses MPL-2.0 OR LGPL-2.1+;
+    // we pick MPL-2.0 (already on the family allowlist), but the
+    // POM may declare both — explicit allowDependency keeps the
+    // inventory deterministic if Licensee maps to the LGPL entry.
+    allowDependency("com.github.librepdf", "openpdf", "2.0.4") {
+        because("OpenPDF dual-licensed MPL-2.0 OR LGPL-2.1+; pageboy ships under MPL-2.0.")
+    }
 }
 
 // oss-licenses A.4 — copy the per-variant Licensee `artifacts.json` into
@@ -304,4 +332,20 @@ dependencies {
     exclude(group = "org.apache.logging.log4j")
     exclude(group = "xml-apis")
   }
+
+  // Phase H — PDF signing.
+  //   * OpenPDF 2.0.4 (MPL-2.0): the PDF writer/stamper for the
+  //     visual-stamp burn-in path (Phase H.4) and the PAdES
+  //     signature appearance + /ByteRange computation (Phase H.5).
+  //     Pure-Java; ~2 MB APK, ~1.5 MB post-R8.
+  //   * Bouncy Castle bcprov-jdk18on 1.81 (MIT X11-style): JCA
+  //     security provider — EC P-256 key gen, RSA-PSS / ECDSA
+  //     signing primitives, PKCS#12 keystore parser.
+  //   * Bouncy Castle bcpkix-jdk18on 1.81 (MIT X11-style):
+  //     CMS / PKCS#7 SignedData generator + X.509 v3 cert builder
+  //     for the self-signed Keystore path.
+  // Total Phase H delta budget: ~2.5–3 MB post-R8.
+  implementation(libs.openpdf.core)
+  implementation(libs.bouncycastle.prov)
+  implementation(libs.bouncycastle.pkix)
 }

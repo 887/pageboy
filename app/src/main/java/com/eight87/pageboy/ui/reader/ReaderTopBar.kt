@@ -50,6 +50,8 @@ internal fun ReaderTopBar(
   onBack: () -> Unit,
   onToggleFind: () -> Unit,
   onShare: () -> Unit,
+  showSignAction: Boolean = false,
+  onSign: () -> Unit = {},
 ) {
   var overflowOpen by remember { mutableStateOf(false) }
   TopAppBar(
@@ -114,13 +116,27 @@ internal fun ReaderTopBar(
         expanded = overflowOpen,
         onDismissRequest = { overflowOpen = false },
       ) {
-        // Phase C ships the menu with a single "no actions yet" entry.
-        // Phase G+ adds annotation / bookmark / signature entries here.
-        DropdownMenuItem(
-          text = { Text(stringResource(R.string.reader_overflow_empty_label)) },
-          onClick = { overflowOpen = false },
-          enabled = false,
-        )
+        if (showSignAction) {
+          // Phase H — single entry point into the sign sheet. Visual
+          // stamp vs cryptographic signature is the first sub-page
+          // inside the sheet itself, not a separate menu entry.
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.reader_overflow_sign_label)) },
+            onClick = {
+              overflowOpen = false
+              onSign()
+            },
+            modifier = Modifier.semantics { testTag = "reader_overflow_sign" },
+          )
+        } else {
+          // Phase C placeholder — kept for non-PDF formats which have
+          // no sign-able surface in v1.
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.reader_overflow_empty_label)) },
+            onClick = { overflowOpen = false },
+            enabled = false,
+          )
+        }
       }
     },
   )

@@ -18,6 +18,13 @@ import com.eight87.pageboy.data.library.PersistedUriPermissionStore
 import com.eight87.pageboy.data.library.SafLibraryScanner
 import com.eight87.pageboy.data.settings.AndroidReaderSettings
 import com.eight87.pageboy.data.settings.ReaderSettings
+import com.eight87.pageboy.data.signing.AndroidSigningSettings
+import com.eight87.pageboy.data.signing.SigningSettings
+import com.eight87.pageboy.format.pdf.signing.KeystoreKeyProvider
+import com.eight87.pageboy.format.pdf.signing.PadesSigner
+import com.eight87.pageboy.format.pdf.signing.PdfStampBurnIn
+import com.eight87.pageboy.format.pdf.signing.Pkcs12KeyProvider
+import com.eight87.pageboy.ui.reader.control.InMemorySigningCommands
 import com.eight87.pageboy.format.api.DocumentRenderer
 import com.eight87.pageboy.format.docx.DocxRenderer
 import com.eight87.pageboy.format.markdown.MarkdownParser
@@ -129,6 +136,41 @@ class AppGraph(private val context: Context) {
   val readerSettings: ReaderSettings by lazy {
     AndroidReaderSettings(readerSettingsDataStore)
   }
+
+  // ---- Phase H — signing-side wiring ----
+
+  private val signingSettingsDataStore: DataStore<Preferences> =
+    context.applicationContext.signingSettingsDataStore
+
+  /**
+   * Phase H.6 — signing settings facet. Stores default key source +
+   * persisted Keystore alias + SAF refs to imported .p12 files. The
+   * `Signing` settings sub-screen reads this; the per-document sign
+   * sheet reads only what it needs.
+   */
+  val signingSettings: SigningSettings by lazy {
+    AndroidSigningSettings(signingSettingsDataStore)
+  }
+
+  /** Phase H.5 — Android Keystore (EC P-256) key source. */
+  val keystoreKeyProvider: KeystoreKeyProvider by lazy { KeystoreKeyProvider() }
+
+  /** Phase H.5 — PKCS#12 (SAF .p12 import) key source. */
+  val pkcs12KeyProvider: Pkcs12KeyProvider by lazy { Pkcs12KeyProvider() }
+
+  /** Phase H.5 — PAdES-B-B signer. Stateless; safe to share. */
+  val padesSigner: PadesSigner by lazy { PadesSigner() }
+
+  /** Phase H.4 — visual-stamp PDF burn-in via OpenPDF. Stateless; safe to share. */
+  val pdfStampBurnIn: PdfStampBurnIn by lazy { PdfStampBurnIn() }
+
+  /**
+   * Phase H.2 — factory per reader instance. Signing state is
+   * per-document (the captured stamp PNG, the chosen key source, the
+   * progress); AppGraph-scoped signing state would leak across
+   * documents.
+   */
+  val signingCommandsFactory: () -> InMemorySigningCommands = { InMemorySigningCommands() }
 
   /**
    * Phase D — Markdown is the first real [DocumentRenderer]. One commonmark
@@ -265,4 +307,9 @@ private val Context.libraryUiDataStore: DataStore<Preferences> by preferencesDat
 /** Phase C.8 — DataStore for reader-side settings (`continuousScrolling` etc.). */
 private val Context.readerSettingsDataStore: DataStore<Preferences> by preferencesDataStore(
   name = "reader_settings",
+)
+
+/** Phase H.6 — DataStore for signing-side settings (default key source, Keystore alias, SAF refs). */
+private val Context.signingSettingsDataStore: DataStore<Preferences> by preferencesDataStore(
+  name = "signing_settings",
 )
