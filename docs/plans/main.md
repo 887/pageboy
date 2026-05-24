@@ -57,7 +57,7 @@ Goal: a buildable, sideload-able APK that boots into a blank Compose screen with
 
 ---
 
-## Phase B — SAF document library scan + library UI — _Shipped: B.1–B.18 in commit `<phase-b>`_
+## Phase B — SAF document library scan + library UI — _Shipped: B.1–B.18 in commit `54a7dc7`_
 
 Goal: walk picked SAF tree roots, classify each entry by `DocumentFormat` via extension + magic-byte sniff, persist a `DocumentEntity` row per file, soft-delete missing files on rescan. Lifts the SAF scanner pattern wholesale from `whisperboy/data/library/` — same `CachedDocumentFile`, same SHA-256-of-(treeUri+relPath) ID, same diff-and-apply transaction. Stack the whisperboy-pattern tabbed library UI on top: four tabs (Started / All / Recents / Pinned), format + collection filter chips, search, sort. The user explicitly asked for this shape: *"adding whisperboy like location folders, filters and so on. multiple taps for started book, just browsing everything etc."*
 
