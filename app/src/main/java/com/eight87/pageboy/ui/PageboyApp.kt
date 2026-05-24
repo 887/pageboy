@@ -7,26 +7,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
@@ -36,39 +33,69 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.eight87.pageboy.AppGraph
+import com.eight87.pageboy.PageboyApplication
 import com.eight87.pageboy.R
+import com.eight87.pageboy.data.library.DocumentSource
+import com.eight87.pageboy.data.library.LibraryRescanCoordinator
+import com.eight87.pageboy.data.library.LibraryTab
+import com.eight87.pageboy.data.library.LibraryUiSettings
+import com.eight87.pageboy.data.library.PersistedUriPermissionStore
+import com.eight87.pageboy.ui.library.LibraryScreen
+import com.eight87.pageboy.ui.reader.ReaderScreen
 import com.eight87.pageboy.ui.settings.AboutScreen
 import com.eight87.pageboy.ui.settings.LicensesScreen
 import com.eight87.pageboy.ui.settings.SettingsScreen
+import com.eight87.pageboy.ui.settings.folders.LibraryFoldersScreen
+import kotlinx.coroutines.launch
 
 /**
  * Root composable. Lays out the family's locked chrome:
  *
  *   - vertical [NavigationRail] on the left, four top-level destinations
- *     (Library / Recents / Pinned / Settings — names tentative per
- *     [Navigation]),
- *   - [TopAppBar] across the top with title + Search + overflow,
+ *     (Library / Recents / Pinned / Settings),
  *   - content host on the right driven by a [NavDisplay] back stack.
  *
- * Sub-pages (About, Licenses) are pushed onto the back stack from inside
- * the Settings destination; the back arrow in their `TopAppBar` pops the
- * stack and the rail still highlights "Settings" since the underlying
- * top-level route is unchanged.
+ * Phase B drops the top app bar — the [LibraryScreen] now owns its own,
+ * with a search field that swaps in place and a sort dropdown. The rail
+ * stays.
  *
- * The locked shape comes from `tonearmboy/ui/nav/TonearmboyApp.kt` with
- * the music-player-specific pieces (overlay sheet, mini-player, palette
- * locals) stripped — a document reader doesn't have a now-playing
- * surface to host. See `docs/plans/ui-shell.md`.
+ * `documentSource` / `libraryUiSettings` / `libraryRescanCoordinator` /
+ * `persistedUriPermissionStore` are injectable so tests can substitute
+ * fakes; in production they come from [AppGraph] off the
+ * [PageboyApplication]. A `null` default keeps the existing
+ * `MainScreenSmokeTest` working (it tests the chrome + the empty rail,
+ * which renders without the graph).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PageboyApp() {
+fun PageboyApp(
+  documentSource: DocumentSource? = null,
+  libraryUiSettings: LibraryUiSettings? = null,
+  libraryRescanCoordinator: LibraryRescanCoordinator? = null,
+  persistedUriPermissionStore: PersistedUriPermissionStore? = null,
+) {
   val backStack = rememberNavBackStack(LibraryRoute)
+  val scope = rememberCoroutineScope()
 
-  // The rail-selected top-level destination is whichever top-level key is
-  // closest to the bottom of the back stack — sub-pages pushed on top
-  // don't change which rail entry highlights. Snapshot the list so
-  // `remember` notices structural changes.
+  // Resolve the data layer from the running Application if no overrides
+  // were passed. Wrap in remember so the lazy AppGraph build happens
+  // exactly once per app process.
+  val context = LocalContext.current
+  val appGraph: AppGraph? = remember(context) {
+    when (val app = context.applicationContext) {
+      is PageboyApplication -> app.appGraph
+      else -> null
+    }
+  }
+  val effectiveDocSource = documentSource ?: appGraph?.documentSource
+  val effectiveUiSettings = libraryUiSettings ?: appGraph?.libraryUiSettings
+  val effectiveCoordinator = libraryRescanCoordinator ?: appGraph?.libraryRescanCoordinator
+  val effectiveRootStore = persistedUriPermissionStore ?: appGraph?.persistedUriPermissionStore
+
+  // Touch the coordinator so the lazy block runs and start() fires.
+  LaunchedEffect(effectiveCoordinator) { /* trigger lazy init */ }
+
   val backStackSnapshot: List<NavKey> = backStack.toList()
   val selectedRoot: NavKey = remember(backStackSnapshot) {
     backStackSnapshot.findLast { entry ->
@@ -76,20 +103,31 @@ fun PageboyApp() {
     } ?: LibraryRoute
   }
 
-  val onRailSelect: (NavKey) -> Unit = { key ->
-    // Tapping a rail entry resets the stack to just that root — the
-    // family pattern for top-level switches. If the user is already on
-    // that root, it's a no-op (don't keep pushing duplicates).
+  val resetTo: (NavKey) -> Unit = { key ->
     if (backStack.lastOrNull() != key) {
       backStack.clear()
       backStack.add(key)
     }
   }
+  val onRailSelect: (NavKey) -> Unit = { key ->
+    // Recents / Pinned land on LibraryRoute with the appropriate tab
+    // pre-selected — the rail acts as a one-tap shortcut to the
+    // LibraryScreen tab. Settings stays its own destination.
+    when (key) {
+      RecentsRoute -> {
+        effectiveUiSettings?.let { scope.launch { it.setTab(LibraryTab.Recents) } }
+        resetTo(LibraryRoute)
+      }
+      PinnedRoute -> {
+        effectiveUiSettings?.let { scope.launch { it.setTab(LibraryTab.Pinned) } }
+        resetTo(LibraryRoute)
+      }
+      else -> resetTo(key)
+    }
+  }
 
   Row(modifier = Modifier.fillMaxSize().semantics { testTag = "pageboy_root" }) {
-    NavigationRail(
-      modifier = Modifier.semantics { testTag = "pageboy_nav_rail" },
-    ) {
+    NavigationRail(modifier = Modifier.semantics { testTag = "pageboy_nav_rail" }) {
       RailItem(
         selected = selectedRoot is LibraryRoute,
         onClick = { onRailSelect(LibraryRoute) },
@@ -120,89 +158,85 @@ fun PageboyApp() {
       )
     }
 
-    Scaffold(
-      modifier = Modifier.fillMaxSize(),
-      topBar = {
-        TopAppBar(
-          title = {
-            Text(
-              stringResource(R.string.app_name),
-              modifier = Modifier.semantics { testTag = "top_bar_title" },
+    NavDisplay(
+      backStack = backStack,
+      onBack = { backStack.removeLastOrNull() },
+      modifier = Modifier
+        .fillMaxSize()
+        .semantics { testTag = "pageboy_nav_host" },
+      entryProvider = entryProvider {
+        entry<LibraryRoute> {
+          if (effectiveDocSource != null && effectiveUiSettings != null &&
+            effectiveCoordinator != null
+          ) {
+            LibraryScreen(
+              documentSource = effectiveDocSource,
+              libraryUiSettings = effectiveUiSettings,
+              libraryRescanCoordinator = effectiveCoordinator,
+              onDocumentTap = { doc ->
+                scope.launch { effectiveDocSource.recordOpen(doc.documentId) }
+                backStack.add(ReaderRoute(doc.documentId, doc.title))
+              },
             )
-          },
-          actions = {
-            IconButton(
-              onClick = { /* Phase B+: search */ },
-              modifier = Modifier.semantics { testTag = "top_bar_search" },
-            ) {
-              Icon(
-                imageVector = Icons.Filled.Search,
-                contentDescription = stringResource(R.string.top_bar_search_cd),
-              )
-            }
-            IconButton(
-              onClick = { /* Phase B+: overflow menu */ },
-              modifier = Modifier.semantics { testTag = "top_bar_overflow" },
-            ) {
-              Icon(
-                imageVector = Icons.Filled.MoreVert,
-                contentDescription = stringResource(R.string.top_bar_overflow_cd),
-              )
-            }
-          },
-        )
-      },
-    ) { innerPadding ->
-      NavDisplay(
-        backStack = backStack,
-        onBack = { backStack.removeLastOrNull() },
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(innerPadding)
-          .semantics { testTag = "pageboy_nav_host" },
-        entryProvider = entryProvider {
-          entry<LibraryRoute> {
+          } else {
+            // Defensive fallback when no graph is available (e.g. the
+            // legacy MainScreenSmokeTest renders the chrome alone).
             PlaceholderScreen(
               text = stringResource(R.string.library_placeholder),
               testTag = "library_placeholder",
             )
           }
-          entry<RecentsRoute> {
-            PlaceholderScreen(
-              text = stringResource(R.string.recents_placeholder),
-              testTag = "recents_placeholder",
-            )
-          }
-          entry<PinnedRoute> {
-            PlaceholderScreen(
-              text = stringResource(R.string.pinned_placeholder),
-              testTag = "pinned_placeholder",
-            )
-          }
-          entry<SettingsRootRoute> {
-            SettingsScreen(
-              onAbout = { backStack.add(SettingsAboutRoute) },
-            )
-          }
-          entry<SettingsAboutRoute> {
-            AboutScreen(
+        }
+        entry<RecentsRoute> {
+          // Rail-shortcut destinations route to LibraryRoute with the
+          // tab pre-selected; if the user lands here directly somehow,
+          // render the same placeholder so nothing crashes.
+          PlaceholderScreen(
+            text = stringResource(R.string.recents_placeholder),
+            testTag = "recents_placeholder",
+          )
+        }
+        entry<PinnedRoute> {
+          PlaceholderScreen(
+            text = stringResource(R.string.pinned_placeholder),
+            testTag = "pinned_placeholder",
+          )
+        }
+        entry<SettingsRootRoute> {
+          SettingsScreen(
+            onAbout = { backStack.add(SettingsAboutRoute) },
+            onLibraryFolders = { backStack.add(SettingsLibraryFoldersRoute) },
+            onRescanNow = { effectiveCoordinator?.requestRescan() },
+          )
+        }
+        entry<SettingsAboutRoute> {
+          AboutScreen(
+            onBack = { backStack.removeLastOrNull() },
+            onLicenses = { backStack.add(SettingsLicensesRoute) },
+          )
+        }
+        entry<SettingsLicensesRoute> {
+          LicensesScreen(onBack = { backStack.removeLastOrNull() })
+        }
+        entry<SettingsLibraryFoldersRoute> {
+          if (effectiveRootStore != null) {
+            LibraryFoldersScreen(
+              persistedUriPermissionStore = effectiveRootStore,
               onBack = { backStack.removeLastOrNull() },
-              onLicenses = { backStack.add(SettingsLicensesRoute) },
             )
           }
-          entry<SettingsLicensesRoute> {
-            LicensesScreen(onBack = { backStack.removeLastOrNull() })
-          }
-        },
-      )
-    }
+        }
+        entry<ReaderRoute> { route ->
+          ReaderScreen(
+            title = route.title,
+            onBack = { backStack.removeLastOrNull() },
+          )
+        }
+      },
+    )
   }
 }
 
-/**
- * Small placeholder body for the Library / Recents / Pinned destinations
- * that won't get real content until their respective phases land.
- */
 @Composable
 private fun PlaceholderScreen(text: String, testTag: String) {
   Box(
@@ -221,10 +255,6 @@ private fun PlaceholderScreen(text: String, testTag: String) {
   }
 }
 
-/**
- * One rail entry. Wrapper around [NavigationRailItem] so the call sites
- * stay readable and the testTag plumbing lives in one place.
- */
 @Composable
 private fun RailItem(
   selected: Boolean,
@@ -242,12 +272,6 @@ private fun RailItem(
   )
 }
 
-/**
- * Stacked-column helper kept inline so the rail can grow a footer
- * (account avatar / FAB) later without a refactor. Currently unused —
- * but the import structure is here, so adding a footer to the rail in
- * Phase B (e.g. an "Add folder" SAF entry point) is a one-call addition.
- */
 @Suppress("unused")
 @Composable
 private fun RailFooterSlot(content: @Composable () -> Unit) {

@@ -43,4 +43,65 @@
     <string name="licenses_unknown_spdx">Unknown SPDX</string>
     <string name="licenses_empty">No license inventory is bundled with this build.</string>
     <string name="licenses_dialog_close">Close</string>
+
+    <!-- Phase B — library screen. -->
+    <string name="library_tab_started">Started</string>
+    <string name="library_tab_all">All</string>
+    <string name="library_tab_recents">Recents</string>
+    <string name="library_tab_pinned">Pinned</string>
+    <string name="library_search_cd">Search documents</string>
+    <string name="library_search_close_cd">Close search</string>
+    <string name="library_search_hint">Search title, file, collection</string>
+    <string name="library_search_clear_cd">Clear search</string>
+    <string name="library_sort_cd">Sort</string>
+    <string name="library_sort_title_asc">Title A–Z</string>
+    <string name="library_sort_title_desc">Title Z–A</string>
+    <string name="library_sort_date_added">Date added</string>
+    <string name="library_sort_last_opened">Last opened</string>
+    <string name="library_sort_format">Format</string>
+    <string name="library_filter_chip_format">Format: %1$s</string>
+    <string name="library_filter_chip_collection">Collection: %1$s</string>
+    <string name="library_filters_clear">Clear filters</string>
+    <string name="library_empty_started">Open a document to see it here.</string>
+    <string name="library_empty_all">No documents yet. Add a folder in Settings → Library.</string>
+    <string name="library_empty_recents">Nothing recent.</string>
+    <string name="library_empty_pinned">Pin a document from its overflow menu.</string>
+    <string name="library_card_overflow_cd">Document options</string>
+    <string name="library_card_action_pin">Pin</string>
+    <string name="library_card_action_unpin">Unpin</string>
+    <string name="library_card_format_unknown">Unknown</string>
+    <string name="library_scan_banner_searching">Searching… %1$d found</string>
+    <string name="library_scan_banner_in">in %1$s</string>
+    <string name="library_scan_complete_snackbar">%1$d new document(s) found</string>
+
+    <!-- Phase B — library folders management screen. -->
+    <string name="library_folders_title">Source folders</string>
+    <string name="library_folders_add">Add folder…</string>
+    <string name="library_folders_empty">No source folders yet. Tap “Add folder…” to point pageboy at a folder.</string>
+    <string name="library_folders_remove_cd">Remove folder</string>
+    <string name="library_folders_back_cd">Back</string>
+    <string name="folder_type_dialog_title">How is this folder organised?</string>
+    <string name="folder_type_singlefile_title">Single file</string>
+    <string name="folder_type_singlefile_subtitle">The picked location is a single document.</string>
+    <string name="folder_type_singlefolder_title">Single folder</string>
+    <string name="folder_type_singlefolder_subtitle">Flat: every document in this folder is shown side-by-side.</string>
+    <string name="folder_type_root_title">Library root</string>
+    <string name="folder_type_root_subtitle">Walk subfolders; each top-level subfolder is a collection.</string>
+    <string name="folder_type_category_title">Category root</string>
+    <string name="folder_type_category_subtitle">Top-level subfolders are categories applied to documents inside.</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <!-- Phase B — settings → Library section. -->
+    <string name="settings_group_library">Library</string>
+    <string name="settings_library_folders_label">Source folders</string>
+    <string name="settings_library_folders_subtitle">Pick the folders pageboy should index.</string>
+    <string name="settings_library_rescan_label">Re-scan now</string>
+    <string name="settings_library_rescan_subtitle">Re-walk every source folder.</string>
+    <string name="settings_library_show_hidden_label">Show hidden files</string>
+    <string name="settings_library_show_hidden_subtitle">Include files whose name starts with a dot.</string>
+
+    <!-- Phase B — placeholder reader screen (real reader is Phase C). -->
+    <string name="reader_placeholder_title">Reader</string>
+    <string name="reader_placeholder_body">Reader for “%1$s” would open here.</string>
+    <string name="reader_back_cd">Back</string>
 </resources>

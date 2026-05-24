@@ -11,6 +11,8 @@ plugins {
   // below stages that JSON into `src/main/assets/licenses/` so LicensesScreen
   // can read it via AssetManager at runtime.
   alias(libs.plugins.licensee)
+  // Phase B — KSP runs Room's annotation processor at build time. Apache-2.0.
+  alias(libs.plugins.ksp)
 }
 
 // Mirror of whisperboy's About-screen build-metadata capture. `git rev-parse`
@@ -42,6 +44,12 @@ android {
         versionName = "1.0"
         buildConfigField("String", "GIT_SHA", "\"$gitShortSha\"")
         buildConfigField("String", "BUILD_DATE", "\"$buildDateUtc\"")
+        // Phase B — Room schema export. Committed under `app/schemas/` so
+        // future migrations can diff the generated JSON. KSP picks this up
+        // via the room.schemaLocation argument below.
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
     }
 
     buildTypes {
@@ -187,4 +195,17 @@ dependencies {
   // kotlinx-serialization JSON — used by LicensesScreen to parse the
   // Licensee-generated `artifacts.json` asset at runtime.
   implementation(libs.kotlinx.serialization.json)
+
+  // Phase B — Room (document library cache) + KSP-generated DAOs.
+  implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.room.ktx)
+  ksp(libs.androidx.room.compiler)
+  testImplementation(libs.androidx.room.testing)
+
+  // Phase B — DataStore Preferences for library UI prefs + per-root metadata.
+  implementation(libs.androidx.datastore.preferences)
+
+  // Phase B — DocumentFile wrapper around SAF tree URIs; backing API for
+  // the scanner's tree walker.
+  implementation(libs.androidx.documentfile)
 }

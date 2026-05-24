@@ -41,16 +41,10 @@ class MainScreenSmokeTest {
   }
 
   @Test
-  fun `PageboyApp renders the top app bar with search and overflow`() {
-    composeRule.setContent { PageboyApp() }
-
-    composeRule.onNodeWithTag("top_bar_title").assertExists()
-    composeRule.onNodeWithTag("top_bar_search").assertExists()
-    composeRule.onNodeWithTag("top_bar_overflow").assertExists()
-  }
-
-  @Test
-  fun `PageboyApp lands on the Library placeholder by default`() {
+  fun `PageboyApp lands on the Library placeholder by default when no graph wired`() {
+    // No data-layer overrides + Robolectric's TestApplication => fallback
+    // placeholder renders. With a real PageboyApplication the LibraryScreen
+    // lands instead; that path is exercised by LibraryScreenSmokeTest.
     composeRule.setContent { PageboyApp() }
     composeRule.onNodeWithTag("library_placeholder").assertExists()
   }

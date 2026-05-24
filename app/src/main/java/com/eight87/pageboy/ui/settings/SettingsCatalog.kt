@@ -3,6 +3,7 @@ package com.eight87.pageboy.ui.settings
 import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.eight87.pageboy.R
+import com.eight87.pageboy.ui.settings.sections.LibraryEntries
 import com.eight87.pageboy.ui.settings.sections.RootEntries
 
 /**
@@ -85,7 +86,7 @@ object SettingsCatalog {
   const val ID_ABOUT = "about"
 
   /** Flat aggregation across the per-section files. */
-  val entries: List<SettingsCatalogEntry> = RootEntries
+  val entries: List<SettingsCatalogEntry> = RootEntries + LibraryEntries
 
   /** Look up an entry by id. Throws if missing — IDs are compile-time
    *  stable. */

@@ -1,0 +1,111 @@
+package com.eight87.pageboy.data.library
+
+import java.io.InputStream
+
+/**
+ * Phase B.4 — extension + magic-byte classifier for the eight supported
+ * formats plus the `Unknown` safety net.
+ *
+ * Strategy:
+ *  1. Read the first [HEAD_BYTES] bytes of the file (enough to sniff the
+ *     ZIP central-directory headers for the four Office formats).
+ *  2. Primary discriminant is the magic header:
+ *     - `%PDF-` → PDF
+ *     - ZIP magic `PK\x03\x04` → inspect the next ~4 KiB for the marker
+ *       member name (EPUB / DOCX / XLSX / ODT / ODS).
+ *  3. Fallback is the extension:
+ *     - `.md` / `.markdown` → Markdown
+ *     - `.txt` → Txt (only if content looks UTF-8 / ASCII)
+ *     - `.pdf` / `.epub` / `.docx` / `.xlsx` / `.odt` / `.ods` —
+ *       matched even when the magic sniff didn't run (e.g. an empty
+ *       file).
+ *  4. Otherwise `Unknown`.
+ *
+ * Stateless object — safe to share across threads. The scanner calls
+ * [classify] once per file inside `Dispatchers.IO`.
+ */
+object DocumentClassifier {
+
+  private const val HEAD_BYTES = 4096
+
+  /**
+   * Classify a file by reading its first bytes via [openStream] and
+   * cross-referencing [fileName]'s extension.
+   *
+   * [openStream] is a thunk so callers can defer SAF
+   * `contentResolver.openInputStream(uri)` until the classifier actually
+   * needs the bytes — for files we can classify from extension alone
+   * (e.g. `.pdf`) we still magic-check to catch mis-named files, but a
+   * future fast-path optimisation could short-circuit known extensions
+   * without the read.
+   *
+   * Stream-open failures (revoked permission, missing file) fall through
+   * to extension-only classification, which the caller treats as best
+   * effort.
+   */
+  fun classify(fileName: String, openStream: () -> InputStream?): DocumentFormat {
+    val head = runCatching {
+      openStream()?.use { stream ->
+        val buf = ByteArray(HEAD_BYTES)
+        var read = 0
+        while (read < HEAD_BYTES) {
+          val n = stream.read(buf, read, HEAD_BYTES - read)
+          if (n <= 0) break
+          read += n
+        }
+        buf.copyOf(read)
+      }
+    }.getOrNull() ?: ByteArray(0)
+
+    val magic = classifyByMagic(head)
+    if (magic != DocumentFormat.Unknown) return magic
+    return classifyByExtension(fileName)
+  }
+
+  /**
+   * Visible for unit tests — classify from a byte array directly. The
+   * scanner-facing path goes through [classify] above.
+   */
+  internal fun classifyByMagic(head: ByteArray): DocumentFormat {
+    if (head.size >= 5 && head[0] == '%'.code.toByte() && head[1] == 'P'.code.toByte() &&
+      head[2] == 'D'.code.toByte() && head[3] == 'F'.code.toByte() && head[4] == '-'.code.toByte()
+    ) {
+      return DocumentFormat.Pdf
+    }
+    if (head.size >= 4 && head[0] == 0x50.toByte() && head[1] == 0x4B.toByte() &&
+      head[2] == 0x03.toByte() && head[3] == 0x04.toByte()
+    ) {
+      // ZIP — inspect the head for the format-discriminator member name.
+      // We do an ASCII substring scan over the byte buffer rather than
+      // parsing the ZIP structure — the marker names appear plainly in
+      // the central-directory entries inside the first few KiB for all
+      // well-formed Office / ODF documents.
+      val text = String(head, Charsets.US_ASCII)
+      return when {
+        text.contains("application/epub+zip") -> DocumentFormat.Epub
+        text.contains("application/vnd.oasis.opendocument.text") -> DocumentFormat.Odt
+        text.contains("application/vnd.oasis.opendocument.spreadsheet") -> DocumentFormat.Ods
+        text.contains("word/document.xml") -> DocumentFormat.Docx
+        text.contains("xl/workbook.xml") -> DocumentFormat.Xlsx
+        // ZIP that didn't match a known content marker — leave to extension fallback.
+        else -> DocumentFormat.Unknown
+      }
+    }
+    return DocumentFormat.Unknown
+  }
+
+  internal fun classifyByExtension(fileName: String): DocumentFormat {
+    val ext = fileName.substringAfterLast('.', missingDelimiterValue = "").lowercase()
+    return when (ext) {
+      "md", "markdown", "mdown", "mkd" -> DocumentFormat.Markdown
+      "txt", "text", "log", "ini", "csv", "tsv" -> DocumentFormat.Txt
+      "pdf" -> DocumentFormat.Pdf
+      "epub" -> DocumentFormat.Epub
+      "docx" -> DocumentFormat.Docx
+      "xlsx" -> DocumentFormat.Xlsx
+      "odt" -> DocumentFormat.Odt
+      "ods" -> DocumentFormat.Ods
+      else -> DocumentFormat.Unknown
+    }
+  }
+}

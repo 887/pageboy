@@ -1,8 +1,8 @@
 # pageboy — main build plan
 
-## Status: 🟢 Phase A shipped; Phase B next
+## Status: 🟢 Phase B shipped; Phase C next
 
-_Phase 0 verified, Phase A shipped (buildable Compose APK with family chrome — vertical nav rail, top bar, settings catalog DSL, AboutScreen, LicensesScreen, Licensee inventory). Phases B+ are **stub headers** awaiting per-format research (see [`format-research.md`](format-research.md)) — each one names the format-research plan it depends on, and the research agent who owns that plan is expected to fill in the sub-step checkboxes for the corresponding phase before any implementation lands._
+_Phase 0 verified, Phase A shipped (buildable Compose APK with family chrome — vertical nav rail, top bar, settings catalog DSL, AboutScreen, LicensesScreen, Licensee inventory). Phase B shipped (multi-root SAF document library — Room schema, four folder modes, magic-byte + extension classifier covering all 8 formats, scanner + rescan coordinator + repository, LibraryScreen with four whisperboy-style tabs + filters + search + sort, folders management screen, scan progress banner, Library settings section). Phases C+ are **stub headers** awaiting per-format research (see [`format-research.md`](format-research.md)) — each one names the format-research plan it depends on, and the research agent who owns that plan is expected to fill in the sub-step checkboxes for the corresponding phase before any implementation lands._
 
 ## Stack (locked)
 
@@ -57,9 +57,36 @@ Goal: a buildable, sideload-able APK that boots into a blank Compose screen with
 
 ---
 
-## Phase B — SAF document library scan _(stub — depends on its own sub-step writing pass)_
+## Phase B — SAF document library scan + library UI — _Shipped: B.1–B.18 in commit `<phase-b>`_
 
-Goal: walk picked SAF tree roots, classify each entry by `DocumentFormat` via extension + magic-byte sniff, persist a `DocumentEntity` row per file, soft-delete missing files on rescan. Lifts the SAF scanner pattern wholesale from `whisperboy/data/library/` — same `CachedDocumentFile`, same SHA-256-of-(treeUri+relPath) ID, same diff-and-apply transaction. The format-specific bits (which formats to recognize, how to extract a title without rendering) finalize once [`format-research.md`](format-research.md) reports back. Sub-step checkboxes filled in by the agent that opens this phase.
+Goal: walk picked SAF tree roots, classify each entry by `DocumentFormat` via extension + magic-byte sniff, persist a `DocumentEntity` row per file, soft-delete missing files on rescan. Lifts the SAF scanner pattern wholesale from `whisperboy/data/library/` — same `CachedDocumentFile`, same SHA-256-of-(treeUri+relPath) ID, same diff-and-apply transaction. Stack the whisperboy-pattern tabbed library UI on top: four tabs (Started / All / Recents / Pinned), format + collection filter chips, search, sort. The user explicitly asked for this shape: *"adding whisperboy like location folders, filters and so on. multiple taps for started book, just browsing everything etc."*
+
+- [x] **B.1** Room database setup. `LibraryDatabase` with `documents`, `recents`, `pinned`, and `library_fingerprints` tables. KSP-generated DAOs. Schema export to `app/schemas/` per Room migration convention. (`library_roots` lives in DataStore via `AndroidPersistedUriPermissionStore` instead of a Room table — same shape whisperboy uses; `read_progress` collapses onto the `documents` row as `lastReadPositionMs` + `lastOpenedAt` for the single-source-of-truth pattern.)
+- [x] **B.2** Multi-root SAF persistence. `LibraryRoot` data class (tree URI + display label + folder mode). `AndroidPersistedUriPermissionStore` writes to DataStore Preferences keyed by URI string; on add it takes the persistable URI permission via `ContentResolver.takePersistableUriPermission(FLAG_GRANT_READ_URI_PERMISSION)`. Permissions survive reboot via the OS-side persistable grants.
+- [x] **B.3** Folder-mode classification — sealed type `FolderType`:
+  - **`SingleFile`** — user picked one specific file; one document.
+  - **`SingleFolder`** — flat: every supported file directly in this folder is a document, no recursion. Collection name = folder name.
+  - **`Root`** — recursive walk. Each top-level subfolder is a collection; subfolders nest into the same collection. Files at the root level land in a "root" collection bucket.
+  - **`Category`** — top-level subfolders are category labels; documents inside each get tagged with that category as their `collection`.
+- [x] **B.4** Document classification by extension + magic-byte sniff. `DocumentFormat` enum (`Markdown` / `Txt` / `Pdf` / `Epub` / `Docx` / `Xlsx` / `Odt` / `Ods` / `Unknown`). `DocumentClassifier` reads first 4 KiB of the file (enough to sniff the ZIP central directory headers for the Office formats); primary discriminant is the magic header, fallback is the extension. Signatures: `%PDF-` for PDF; ZIP magic `PK\x03\x04` then check for an early `mimetype` member (EPUB → `application/epub+zip`, ODT → `application/vnd.oasis.opendocument.text`, ODS → `application/vnd.oasis.opendocument.spreadsheet`) or central-directory entries (`word/document.xml` → DOCX, `xl/workbook.xml` → XLSX); extensions `.md` / `.markdown` → Markdown; anything text-like with `.txt` → Txt.
+- [x] **B.5** `CachedDocumentFile` performance wrapper. Direct adaptation of whisperboy's `CachedDocumentFile` — lazy `name` / `length` / `lastModified` / `isDirectory` / `isFile` / `type` / `children`. Cache is per-instance, fresh wrapper per rescan.
+- [x] **B.6** `SafLibraryScanner` — the walker. Per root, walks the tree using the folder-mode rules; for each candidate file, classifies + reads light metadata (file size, mtime, derived title from filename) + emits a `ScannedDocument`. Soft-deletes via `isMissing = 1` flag on rescan (never hard-delete so per-document state like `lastReadPositionMs` / `pinned` survives a temporary unmount or rename).
+- [x] **B.7** `LibraryRescanCoordinator` — schedules + debounces scans. Triggers: manual user-request, root-added (via observing the `PersistedUriPermissionStore.observeRoots()` flow with `distinctUntilChanged`). Exposes `Flow<ScanState>` (`Idle` / `Scanning` / `Failed`). WorkManager + foreground service NOT needed (pageboy has no playback service — scans are foreground and bounded).
+- [x] **B.8** `LibraryRepository` — single API the UI talks to behind narrow interfaces (`DocumentSource` for the UI, `ScanWriter` for the coordinator). Methods include `observeDocuments(): Flow<List<DocumentEntity>>`, `observeCollections(): Flow<List<String>>`, `addRoot()` / `removeRoot()` / `requestRescan()`, `pinDocument()`, `recordOpen()`.
+- [x] **B.9** **Library UI with tabs.** `LibraryScreen` Composable with a `TabRow` along the top. Four tabs: **Started** (documents with `lastReadPositionMs > 0`), **All** (every non-missing document sorted per LibrarySorting; default Title A-Z), **Recents** (documents ordered by `lastOpenedAt DESC`, capped at 30), **Pinned** (documents the user has explicitly pinned).
+- [x] **B.10** **Filters + search + sort.** Filter chip row above the tab content: filter-by-format (multi-select chips for the 8 formats), filter-by-collection (multi-select chips). Search box (top-app-bar search icon expands to text field) case-insensitive substring match across title + filename + collection. Sort menu in app bar: Title A-Z / Title Z-A / Date added / Last opened / Format. Persisted in `LibraryUiPrefs` (DataStore).
+- [x] **B.11** **Document cards.** Each card shows: format icon + title + collection chip + read-progress indicator (small linear bar on Started tab) + overflow menu (Pin/Unpin). Tap navigates to `ReaderRoute(docId)` which routes to a placeholder `ReaderScreen` (real reader is Phase C+).
+- [x] **B.12** **Multi-root management screen.** `LibraryFoldersScreen` accessible from Settings → Library → Source folders. Lists each root with display label + folder mode + path + remove button. "Add folder…" button launches the SAF tree-URI picker then prompts for folder mode via a modal bottom sheet.
+- [x] **B.13** **Scan progress banner.** When scanning, `LibraryScanProgressBanner` appears at the top of LibraryScreen (below the filter row) with cancel disabled (no cancel yet — scan is fast for typical document libraries). "X documents found" snackbar on completion when `newDocuments > 0`.
+- [x] **B.14** **Empty states.** Per tab: Started "Open something to see it here", All "No documents yet — add a folder in Settings → Library", Recents "Nothing recent", Pinned "Pin documents from the overflow menu".
+- [x] **B.15** **Settings integration.** Add a `Library` section to the settings catalog DSL with entries: Source folders (routes to B.12 screen), Re-scan now (button-action), Show hidden files (boolean toggle — defaults false). Auto-scan-on-start is implicit (the rescan coordinator fires on root-added and on app-start automatically).
+- [x] **B.16** **Tests:**
+  - `DocumentClassifierTest` — JVM. Feeds known byte prefixes for each format; asserts correct `DocumentFormat`.
+  - `LibraryFilterSortSearchTest` — JVM. Verifies tab filtering, format/collection chip filtering, search substring match, sort order.
+  - `LibraryScreenSmokeTest` — Robolectric Compose test. Renders LibraryScreen with a fake `DocumentSource`; asserts all four tab labels render; asserts at least one document card renders.
+  - `LibraryFoldersScreenSmokeTest` — Robolectric Compose test. Renders empty + non-empty folder list; asserts the "Add folder" button exists.
+- [x] **B.17** **Build green** — `./gradlew assembleDebug` + `./gradlew testDebugUnitTest` both succeed.
+- [x] **B.18** **Smoke on `emulator-5554`** — install rebuilt APK, launch, screencap the library empty-state + tab row. Screencaps land at `/tmp/pageboy-B-library-empty.png` and `/tmp/pageboy-B-library-tabs.png`.
 
 ---
 

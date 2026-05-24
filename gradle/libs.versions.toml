@@ -40,6 +40,15 @@ licensee = "1.13.0"
 robolectric = "4.14.1"
 androidxTestCoreKtx = "1.6.1"
 androidxTestExtJunitKtx = "1.2.1"
+# Phase B — Room (KSP-generated DAOs), DataStore Preferences, DocumentFile (SAF).
+# All Apache-2.0; family allowlist already permits them, no Licensee gate
+# changes required.
+room = "2.8.0"
+# KSP2 uses standalone versioning decoupled from Kotlin; 2.3.8 is the
+# latest stable line at May 2026 and binary-compatible with Kotlin 2.3.20.
+ksp = "2.3.8"
+datastore = "1.1.7"
+documentfile = "1.1.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -77,9 +86,20 @@ androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", vers
 androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewmodelNav3" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 
+# Phase B — Room (document cache), DataStore Preferences (UI prefs + library
+# roots), DocumentFile (SAF tree walking). All Apache-2.0.
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 # oss-licenses A.1 — Licensee Gradle plugin for the build-time SPDX inventory.
 licensee = { id = "app.cash.licensee", version.ref = "licensee" }
+# Phase B — KSP for Room's compile-time DAO generation. Apache-2.0.
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
