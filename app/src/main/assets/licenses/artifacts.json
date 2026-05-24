@@ -3074,6 +3074,22 @@
         }
     },
     {
+        "groupId": "org.apache.logging.log4j",
+        "artifactId": "log4j-api",
+        "version": "2.24.3",
+        "name": "Apache Log4j API",
+        "spdxLicenses": [
+            {
+                "identifier": "Apache-2.0",
+                "name": "Apache License 2.0",
+                "url": "https://www.apache.org/licenses/LICENSE-2.0"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/apache/logging-log4j2"
+        }
+    },
+    {
         "groupId": "org.apache.poi",
         "artifactId": "poi",
         "version": "5.5.1",

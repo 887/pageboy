@@ -328,22 +328,21 @@ dependencies {
   // so it picks up our pinned POI 5.5.1 rather than its own (likely older)
   // pin.
   //
-  // Several POI transitives are excluded — `log4j-api` (Android ships
-  // SLF4J via androidx; POI logs are noisy and we don't pipe them
-  // anywhere), `xml-apis` (Android's stripped runtime owns the
-  // `org.w3c.dom.*` + `org.xml.sax.*` namespaces; pulling another copy
-  // causes dex collisions).
+  // `xml-apis` is excluded — Android's stripped runtime owns the
+  // `org.w3c.dom.*` + `org.xml.sax.*` namespaces; pulling another
+  // copy causes dex collisions. `log4j-api` MUST stay on the
+  // classpath even though we don't pipe POI's logs anywhere —
+  // POI 5.x's `DataFormatter.<clinit>` calls into log4j's `Logger`
+  // class at static-init time, and excluding it crashes the app at
+  // first XLSX render with `NoClassDefFoundError`.
   implementation(libs.poi.ooxml) {
-    exclude(group = "org.apache.logging.log4j")
     exclude(group = "xml-apis")
   }
   implementation(libs.poi.scratchpad) {
-    exclude(group = "org.apache.logging.log4j")
     exclude(group = "xml-apis")
   }
   implementation(libs.aalto.xml)
   implementation(libs.xlsx.streamer) {
-    exclude(group = "org.apache.logging.log4j")
     exclude(group = "xml-apis")
   }
 
