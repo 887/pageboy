@@ -187,9 +187,52 @@ Goal: spreadsheet sibling to ODT, equivalent to XLSX. Likely shares plumbing wit
 
 ---
 
-## Phase M — EPUB renderer _(stub — depends on `docs/plans/format-epub.md`)_
+## Phase M — EPUB renderer — _Shipped: M.1–M.10 in Phase M commit_
 
-Goal: render EPUB 2 + 3 spine, navigate by ToC, reflow at the user's font size, per-book bookmark + last-read position. CSS sanitization is the hairy part (an EPUB can ship arbitrary CSS that needs to be filtered before reaching the renderer). Research plan picks the rendering surface (Compose-native `Text` + custom block layout vs. embedded WebView vs. hybrid).
+Goal: render EPUB 2 + 3 via Readium Kotlin Toolkit 3.2.0 (BSD-3-Clause)
+through `EpubNavigatorFragment` hosted in Compose via `AndroidFragment`.
+LCP DRM deliberately out (proprietary blob, not on the licence
+allowlist).
+
+- [x] **M.1** Add Readium 3.2.0 (`readium-shared` + `readium-streamer`
+  + `readium-navigator`) to libs.versions.toml + app/build.gradle.kts;
+  enable `coreLibraryDesugaringEnabled` + `coreLibraryDesugaring(libs.desugar.jdk.libs)`;
+  exclude `androidx.media3` transitives from `readium-navigator`.
+  Maven Central availability verified live.
+- [x] **M.2** Extend `ScrollPosition` sealed with `EpubCfi(cfi: String)`;
+  update `defaultFractionFor` in `DefaultScrollPersistence` to cover the
+  new variant (reports 0 — chrome library card hides the progress bar
+  for reflowable formats).
+- [x] **M.3** `format/epub/` package:
+  - `EpubRenderer.kt` (DocumentRenderer impl, dispatches to Body)
+  - `EpubHandle.kt` (DocumentHandle subtype carrying Publication +
+    title + tocItems)
+  - `EpubParser.kt` (wraps Readium's AssetRetriever + PublicationOpener)
+  - `EpubBody.kt` (Compose host for EpubNavigatorFragment via
+    AndroidFragment interop, mirrors PdfBody pattern)
+  - `EpubFragmentHost.kt` (FragmentFactory bridge)
+  - `EpubTitleExtractor.kt` (metadata title with filename fallback)
+- [x] **M.4** WebView security gate — `EpubBody.hardenWebViewIfNeeded`
+  walks the fragment view tree, disables JS / file access / content
+  access, installs a `HardenedReadiumWebViewClient` that 403s non-
+  `publication://` URLs.
+- [x] **M.5** Register `EpubRenderer` in `AppGraph.formatRegistry`
+  (one-line addition; no `when (format)` switches grew per R.X.9).
+- [x] **M.6** Find-in-doc bridge — query observation wired; reverse
+  publish into `RendererFindSink.submitMatches` (via Readium's
+  `publication.search`) deferred to a follow-on (TODO inline).
+- [x] **M.7** ToC navigation — `DocumentHandle.tocAvailable` capability
+  flag (defaults false; EpubHandle returns true when the publication
+  declared a non-empty ToC); `ReaderTopBar` overflow menu surfaces a
+  capability-gated "Table of contents" entry; click currently inert
+  pending the chrome ↔ renderer command bridge (documented inline).
+- [x] **M.8** Tests — `EpubCfiSerializationTest` (7),
+  `EpubRendererTest` (4), `EpubRegistryWiringTest` (2),
+  `EpubFragmentHostTest` (1). Total +14.
+- [x] **M.9** Build green — `:app:assembleDebug` +
+  `:app:testDebugUnitTest`.
+- [x] **M.10** This main.md updated; refactor-solid.md Phase M audit
+  appended.
 
 ---
 

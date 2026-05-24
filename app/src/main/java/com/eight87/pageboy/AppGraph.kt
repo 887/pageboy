@@ -20,6 +20,8 @@ import com.eight87.pageboy.data.settings.AndroidReaderSettings
 import com.eight87.pageboy.data.settings.ReaderSettings
 import com.eight87.pageboy.format.api.DocumentRenderer
 import com.eight87.pageboy.format.docx.DocxRenderer
+import com.eight87.pageboy.format.epub.EpubParser
+import com.eight87.pageboy.format.epub.EpubRenderer
 import com.eight87.pageboy.format.markdown.MarkdownParser
 import com.eight87.pageboy.format.markdown.MarkdownRenderer
 import com.eight87.pageboy.format.pdf.PdfRenderer
@@ -138,6 +140,21 @@ class AppGraph(private val context: Context) {
   private val markdownParser: MarkdownParser by lazy { MarkdownParser() }
 
   /**
+   * Phase M — Readium parser pipeline. One instance shared across
+   * renderer invocations; the `PublicationOpener` + `AssetRetriever`
+   * components are stateless after construction. The `HttpClient`
+   * Readium needs is built internally by the parser (only used as a
+   * fallback for remote-URL retrieval; pageboy never feeds remote
+   * URLs in via SAF).
+   */
+  private val epubParser: EpubParser by lazy {
+    EpubParser(
+      context = context.applicationContext,
+      contentResolver = context.applicationContext.contentResolver,
+    )
+  }
+
+  /**
    * Phase C.2 / C.7 / D.5 — format registry. Phase D adds the
    * [MarkdownRenderer] entry; every other [DocumentFormat] continues to
    * fall through to the [com.eight87.pageboy.format.placeholder.PlaceholderRenderer]
@@ -174,6 +191,13 @@ class AppGraph(private val context: Context) {
         // cross-package (cross-format unification deferred to Phase 1.x).
         DocumentFormat.Odt to OdtRenderer(),
         DocumentFormat.Ods to OdsRenderer(),
+        // Phase M — EPUB via Readium Kotlin Toolkit 3.2.0 (BSD-3-
+        // Clause). WebView-backed rendering via EpubNavigatorFragment;
+        // androidx.media3-* transitives excluded from the navigator
+        // artifact in app/build.gradle.kts (audiobook nav we don't
+        // use). Core library desugaring enabled. LCP DRM deliberately
+        // out — proprietary blob, not on the allowlist.
+        DocumentFormat.Epub to EpubRenderer(epubParser),
       ),
     )
   }

@@ -35,6 +35,20 @@ interface DocumentHandle : AutoCloseable {
    */
   val pageCount: Int?
 
+  /**
+   * Phase M.7 — whether the format exposes a non-empty table of
+   * contents the reader chrome can surface as an overflow entry.
+   * Defaults to `false` so formats without a ToC concept (Markdown,
+   * TXT, plain DOCX paragraphs, etc.) silently opt out; the EPUB
+   * handle returns `true` when the publication declared one.
+   *
+   * Adding a per-format ToC support = override this + expose the
+   * navigation primitives via the renderer's own surface. The
+   * chrome's overflow menu reads only this single capability flag.
+   */
+  val tocAvailable: Boolean
+    get() = false
+
   /** Default impl — most handles have nothing to release. */
   override fun close() {
     // no-op by default

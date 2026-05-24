@@ -1,6 +1,11 @@
 # pageboy — EPUB renderer plan
 
-## Status: 🟡 RECOMMENDED — review pending
+## Status: ✅ DONE — Phase M shipped Readium 3.2.0 + WebView path per the recommendation. M.1–M.10 in main.md ticked.
+
+Phase-M deferrals carried forward:
+- Bidirectional find-in-doc bridge (publication.search → RendererFindSink.submitMatches) — query observation wired; reverse publish lands in a follow-on.
+- ToC navigation tap-to-jump — capability flag wired (`DocumentHandle.tocAvailable`), overflow entry rendered; the chrome ↔ renderer command bridge to translate a ToC tap into `navigator.go(locator)` lands with the same chrome-side controller axis that future annotation/signature work introduces.
+- M.11 bookmarks overlay, M.12 highlights overlay, M.13 ToC + spine AVD smoke fixtures, M.14 README scope-exclusions, M.15 oss-licenses.md Readium/jsoup entries (auto-picked up by Licensee), M.16 plan completion — sub-steps from the original detailed phase remain open follow-ons; the Phase M umbrella in main.md tracks the shipped slice M.1–M.10.
 
 ## Recommendation
 

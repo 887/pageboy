@@ -22,10 +22,11 @@ import kotlinx.serialization.json.Json
  *    page index + a 0..1 ratio within that page so resuming a 500-page
  *    document lands the user back on the same paragraph regardless of
  *    device rotation or font-size change.
- *  - **EPUB CFI** lands in Phase M as a separate variant carrying the
- *    canonical EPUB-3 CFI string (XPath-shaped). Not declared here so
- *    Phase F doesn't introduce a Liskov-violating empty variant
- *    (R.X.5).
+ *  - [EpubCfi] — Phase M shipped variant carrying the canonical EPUB-3
+ *    CFI (Canonical Fragment Identifier) string serialised through
+ *    Readium's `Locator.toJSON()` round-trip. The EPUB navigator owns
+ *    the actual XPath-shaped CFI; this variant treats it as opaque so
+ *    the codec stays single-concern.
  *
  * Persistence: the chrome's `DefaultScrollPersistence` encodes the
  * variant as JSON via [encode] and writes it to a TEXT column on
@@ -64,6 +65,23 @@ sealed class ScrollPosition {
    */
   @Serializable
   data class PdfPage(val page: Int, val ratio: Float) : ScrollPosition()
+
+  /**
+   * Phase M — position inside an EPUB publication. [cfi] is the
+   * Readium-serialised locator JSON (`Locator.toJSON().toString()`)
+   * containing both the spine-item href and the in-resource EPUB CFI
+   * (a W3C-spec XPath-shaped string locating a character offset inside
+   * the resource's DOM). The EPUB navigator round-trips it via
+   * `Locator.fromJSON(JSONObject(cfi))` → `navigator.go(locator)`.
+   *
+   * Persisted as JSON-inside-JSON — the outer envelope is the
+   * [ScrollPosition] discriminator the codec writes; the inner string
+   * is Readium's own locator-JSON payload. Treating it as opaque keeps
+   * the codec single-concern and decoupled from Readium's locator
+   * model shifting between minor versions.
+   */
+  @Serializable
+  data class EpubCfi(val cfi: String) : ScrollPosition()
 
   companion object {
     private val json = Json {

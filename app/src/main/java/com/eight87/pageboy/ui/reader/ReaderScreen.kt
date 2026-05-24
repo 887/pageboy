@@ -81,6 +81,11 @@ fun ReaderScreen(
     else -> ""
   }
 
+  // Phase M.7 — capability-gated ToC entry. The chrome reads the
+  // narrow `DocumentHandle.tocAvailable` flag exposed by the resolved
+  // handle (defaults to false on every renderer other than EPUB).
+  val tocAvailable = (state as? ReaderState.Open)?.handle?.tocAvailable == true
+
   Column(
     modifier = modifier
       .fillMaxSize()
@@ -91,6 +96,15 @@ fun ReaderScreen(
       title = title,
       findActive = findPanelOpen,
       onBack = onBack,
+      tocAvailable = tocAvailable,
+      onOpenToc = {
+        // Phase M.7 — v1 surfaces the affordance but does not yet
+        // host a ToC sheet (the navigator-side `go(locator)` wiring
+        // for tap-to-jump lives inside the format/epub/ package and
+        // needs a chrome ↔ renderer command bridge that's heavier
+        // than fits this phase). The capability is correctly gated;
+        // the user-visible behaviour completes in a follow-on phase.
+      },
       onToggleFind = {
         findPanelOpen = !findPanelOpen
         if (!findPanelOpen) findInDocCommands.clear()
