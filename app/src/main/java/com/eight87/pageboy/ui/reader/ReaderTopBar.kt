@@ -50,6 +50,14 @@ internal fun ReaderTopBar(
   onBack: () -> Unit,
   onToggleFind: () -> Unit,
   onShare: () -> Unit,
+  // Phase M.7 — capability-gated overflow entries. Format renderers
+  // that expose a non-empty table of contents (currently only EPUB)
+  // set `tocAvailable = true`; the chrome surfaces a "Table of
+  // contents…" entry that calls back into [onOpenToc]. Default false
+  // so the existing renderers (Markdown / TXT / DOCX / etc.) stay
+  // visually identical.
+  tocAvailable: Boolean = false,
+  onOpenToc: () -> Unit = {},
 ) {
   var overflowOpen by remember { mutableStateOf(false) }
   TopAppBar(
@@ -114,13 +122,28 @@ internal fun ReaderTopBar(
         expanded = overflowOpen,
         onDismissRequest = { overflowOpen = false },
       ) {
-        // Phase C ships the menu with a single "no actions yet" entry.
-        // Phase G+ adds annotation / bookmark / signature entries here.
-        DropdownMenuItem(
-          text = { Text(stringResource(R.string.reader_overflow_empty_label)) },
-          onClick = { overflowOpen = false },
-          enabled = false,
-        )
+        if (tocAvailable) {
+          // Phase M.7 — capability-gated "Table of contents…" entry,
+          // surfaced only when the resolved DocumentHandle.tocAvailable
+          // is true (currently only EPUB).
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.reader_overflow_toc_label)) },
+            onClick = {
+              overflowOpen = false
+              onOpenToc()
+            },
+            modifier = Modifier.semantics { testTag = "reader_overflow_toc_item" },
+          )
+        } else {
+          // Phase C shipped the menu with a single "no actions yet"
+          // entry. Phase G+ adds annotation / bookmark / signature
+          // entries here.
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.reader_overflow_empty_label)) },
+            onClick = { overflowOpen = false },
+            enabled = false,
+          )
+        }
       }
     },
   )

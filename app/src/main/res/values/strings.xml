@@ -114,6 +114,8 @@
     <string name="reader_share_cd">Share</string>
     <string name="reader_overflow_cd">More options</string>
     <string name="reader_overflow_empty_label">No actions yet</string>
+    <string name="reader_overflow_toc_label">Table of contents</string>
+    <string name="reader_toc_unavailable_message">Table of contents not implemented yet</string>
     <string name="reader_opening_label">Opening…</string>
     <string name="reader_error_headline">Could not open document</string>
     <string name="reader_error_retry">Retry</string>

@@ -115,6 +115,13 @@ class DefaultScrollPersistence(
     fun defaultFractionFor(position: ScrollPosition): Float = when (position) {
       is ScrollPosition.LazyColumn -> 0f
       is ScrollPosition.PdfPage -> position.ratio.coerceIn(0f, 1f)
+      // Phase M — EPUB reflows; the navigator's locator carries an
+      // optional `progression` (0..1 within the resource) + a
+      // `totalProgression` (0..1 across the whole publication) inside
+      // the JSON payload but the chrome here keeps things opaque.
+      // Report 0 so the library card's progress bar stays hidden until
+      // a richer per-renderer override surfaces it.
+      is ScrollPosition.EpubCfi -> 0f
     }
   }
 }

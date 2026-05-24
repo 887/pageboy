@@ -62,6 +62,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Phase M — Readium Kotlin Toolkit 3.2.0 requires core library
+        // desugaring (uses java.time + java.nio APIs that minSdk 28 does
+        // not natively cover). The desugar runtime ships in the APK as
+        // `com.android.tools:desugar_jdk_libs` declared in `dependencies`
+        // via `coreLibraryDesugaring(...)`.
+        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
       compose = true
@@ -136,6 +142,14 @@ licensee {
     // license via opensource.org's new URL path (/license/mit instead
     // of /licenses/MIT); whitelist that URL so Licensee maps it to MIT.
     allowUrl("https://opensource.org/license/mit")
+    // Phase M — Readium 3.2.0 (BSD-3-Clause) ships its license URL as
+    // a GitHub blob link rather than the SPDX canonical URL. jsoup
+    // 1.22.2 (pulled transitively by Readium-shared for HTML walking)
+    // lists its MIT license via the jsoup.org/license URL. Both
+    // resolve to family-allowlist licences when followed; whitelist
+    // the URLs so Licensee maps them correctly.
+    allowUrl("https://github.com/readium/kotlin-toolkit/blob/main/LICENSE")
+    allowUrl("https://jsoup.org/license")
 }
 
 // oss-licenses A.4 — copy the per-variant Licensee `artifacts.json` into
@@ -304,4 +318,30 @@ dependencies {
     exclude(group = "org.apache.logging.log4j")
     exclude(group = "xml-apis")
   }
+
+  // Phase M — Readium Kotlin Toolkit (EPUB renderer). BSD-3-Clause; on
+  // the Licensee allowlist (Phase A configured the family allowlist
+  // including BSD-3-Clause).
+  //
+  // androidx.media3-* transitives are excluded — Readium's
+  // readium-navigator pulls media3-session / media3-common-ktx /
+  // media3-exoplayer because the navigator umbrella also covers
+  // audiobooks. Pageboy never reaches that pathway (we route only EPUB
+  // assets to the EpubNavigatorFragment), so excluding the transitives
+  // shaves ~600–900 KB of unminified bytes the long-term R8 pass would
+  // otherwise have to chase per docs/plans/format-epub.md APK-budget.
+  //
+  // androidx.legacy:legacy-support-core-ui is left in — Readium's
+  // EpubNavigatorFragment depends on `androidx.viewpager` through it for
+  // the spine pager. R8 trims most.
+  implementation(libs.readium.shared)
+  implementation(libs.readium.streamer)
+  implementation(libs.readium.navigator) {
+    exclude(group = "androidx.media3")
+  }
+
+  // Phase M — desugar_jdk_libs (java.time / java.nio backport for
+  // minSdk 28; required by Readium). Apache-2.0. Ships its own runtime
+  // dex inside the APK; R8 tree-shakes unreferenced parts.
+  coreLibraryDesugaring(libs.desugar.jdk.libs)
 }

@@ -98,6 +98,8 @@ In Compose specifically: don't pass a god-state object down 5 levels. Pass the 3
 
 Pageboy's format-pluralism (8 formats in v1, room for more in v2) makes `DocumentRenderer` the load-bearing abstraction. Every format renderer is a `DocumentRenderer` impl; the reader screen dispatches via a `FormatRegistry` (or sealed-type registry) — never via `when (format)` in the reader. Adding a format = adding an impl + a registry entry; the reader doesn't change.
 
+**Phase M completes the intended `ScrollPosition` sealed shape**: `LazyColumn` (Markdown / TXT / DOCX / ODT) + `PdfPage` (PDF) + `EpubCfi` (EPUB) — the three variants the original Phase D audit observation O.D.2 anticipated. The chrome's `DefaultScrollPersistence` projects each variant to a fractional read-progress via an exhaustive `when`. Future renderers either reuse one of the three variants or add a fourth (the open/closed door stays propped open).
+
 The interface itself stays narrow:
 
 ```kotlin
@@ -380,6 +382,38 @@ R.C.3 sub-step (Phase D+ renderers take only the interfaces they need) now ticke
 ### Test count: 104 → 149 (+45). All green.
 
 ### Build: `:app:assembleDebug` + `:app:testDebugUnitTest` both green. APK debug delta 67.8 MB → 67.75 MB (-50 KB unminified — the TXT renderer + `domain/render/` neutral types are pure JVM stdlib, no new deps; the negative delta is build noise from cache-line packing of the dex output).
+
+---
+
+## Audit log — Phase M
+
+Audit of Phase M against this plan. Single Phase-M commit; EPUB renderer via Readium Kotlin Toolkit 3.2.0 (BSD-3-Clause); `ScrollPosition.EpubCfi` sealed variant added; `DocumentHandle.tocAvailable` capability flag introduced + chrome overflow gated on it.
+
+### Pre-merge checklist (8 items) — verdict per item
+
+1. **R.X.1 narrow interfaces** — PASS. `EpubRenderer` takes a single `EpubParser`. `EpubBody` takes only `EpubHandle` + `RendererContext` + `Modifier`. The chrome's `ReaderTopBar` gains two optional params (`tocAvailable: Boolean` + `onOpenToc: () -> Unit`) — narrow ISP additions, defaults preserve all existing call sites.
+2. **R.X.2 sealed dispatch** — PASS. `ScrollPosition` adds the third sealed variant per the original design. `defaultFractionFor` in `DefaultScrollPersistence` extended exhaustively (`LazyColumn` / `PdfPage` / `EpubCfi`). Format dispatch continues through `FormatRegistry` (R.X.9); no `when (format)` switches grew.
+3. **R.X.3 composition root** — PASS. `EpubParser` + `EpubRenderer` constructed only in `AppGraph.kt`. UI takes interfaces only.
+4. **R.X.4 file size** — PASS. Phase M file LOC: `EpubBody.kt` 334 (justified — the file owns the WebView security hardening + the scroll-persistence bridge + the find bridge inline as separate composables; splitting further would scatter the renderer concerns across more files than it'd save). `EpubParser.kt` 114, `EpubRenderer.kt` 99, `EpubFragmentHost.kt` 85, `EpubHandle.kt` 63, `EpubTitleExtractor.kt` 22. Every file under 400 LOC.
+5. **R.X.5 NotImplementedError** — PASS. None present. Three deferrals documented inline with closing phase: bidirectional find-in-doc bridge (`EpubBody.EpubFindBridge` TODO), ToC tap-to-jump navigation (the chrome's `onOpenToc` callback is a no-op pending the chrome ↔ renderer command bridge), restore-on-open uses navigator.go(locator) rather than initialLocator (the `initialLocator` factory param is null because the suspending sink read can't complete before fragment build).
+6. **R.X.6 wrong-direction imports** — PASS. `format/epub/` imports `format/api/` + `domain/render/` + Readium (third-party) + `data/library/DocumentFormat` (narrow exception per O.C.1). No `format/` → `ui/`, no `data/` → `ui/`, no `data/` → `format/`. The chrome's `ui/reader/ReaderScreen.kt` reads `DocumentHandle.tocAvailable` via the `format/api/` interface, not via an `import com.eight87.pageboy.format.epub.*`.
+7. **R.X.7 Compose ISP** — PASS. `EpubBody` is split into three composables: the outer body that orchestrates the fragment host + scroll/find bridges, `EpubScrollPersistenceBridge` (takes only the publication key + context + fragmentManager), `EpubFindBridge` (takes only the query StateFlow). The `ReaderTopBar` overflow now branches on a single capability flag rather than threading a god-state.
+8. **R.X.8 test discipline** — PASS. 14 new tests across 4 classes: `EpubCfiSerializationTest` (7 — round-trip of all three variants + corner cases), `EpubRendererTest` (4 — renderer format identity + default tocAvailable / pageCount + extractTitle failure-swallowing), `EpubRegistryWiringTest` (2 — registry routes Epub to the registered renderer + placeholder fallback works for unmapped slot), `EpubFragmentHostTest` (1 — defaultFactory smoke). Total: 149 → 172 across the worktree (0 failures). The end-to-end open path (real EPUB bytes through SAF + Readium parse + Compose render) is deferred to the AVD smoke chain — same pattern PDF / DOCX / XLSX / ODT / ODS use.
+9. **R.X.9 DocumentRenderer** — PASS. Phase M adds one `AppGraph.formatRegistry` entry (`DocumentFormat.Epub to EpubRenderer(epubParser)`); no `when (format)` switches grew in the reader chrome. `ScrollPosition` is now complete (LazyColumn / PdfPage / EpubCfi) — the intended sealed shape per Phase D audit O.D.2 + Phase F's PdfPage addition now closes with this commit.
+
+### Phase M audit observations
+
+**O.M.1 — `DocumentHandle.tocAvailable` is a capability flag, not a navigation primitive.** The flag tells the chrome whether to render the overflow entry. The actual navigation primitive (translate a ToC tap → `navigator.go(locator)` on the live Readium fragment) requires a chrome ↔ renderer command bridge along the lines R.C anticipates for annotation + signature commands. Phase M ships the capability surface; the navigation bridge lands when a second chrome-side capability needs the same shape (likely Phase G annotation-overlay drawing, which has the same chrome-tap-renderer-receives pattern).
+
+**O.M.2 — `EpubBody` parses Readium's locator-JSON as opaque.** Per `format-epub.md` the codec treats the CFI payload as a string and rebuilds via `Locator.fromJSON(JSONObject(payload))`. This is robust to Readium minor-version schema additions (unknown fields silently survive the round-trip via `ignoreUnknownKeys` on the outer envelope) but does mean a Readium major-version change to the locator schema would invalidate every saved CFI on upgrade. Acceptable for v1 — the locator schema has been stable across the 3.x line and Readium publishes migration notes for any breaking change.
+
+**O.M.3 — `androidx.media3-*` transitives are excluded at the declaration site, not from `readium-shared` or `readium-streamer`.** Only `readium-navigator` pulls media3 (it's the navigator's audiobook pathway). Verified via `:app:dependencies` output that media3 classes do not appear in the resolved runtime classpath after the exclusion. The R8 release pass will additionally tree-shake anything left over.
+
+**O.M.4 — `DocumentRenderer.extractTitle()` for EPUB opens the publication twice on the scanner-fast-path.** The scanner doesn't currently call `extractTitle` (per Phase B B.6 the scanner uses the filename-derived title); the hook stays in place for a follow-on phase. When that phase lands, the EPUB title probe will need to be reworked to avoid the per-document Readium parse cost — likely by extending `EpubParser` with a lightweight "open metadata only" path that bails before the streamer hydrates the spine container.
+
+### Test count: 149 → 172 (+14 EPUB + others). All green.
+
+### Build: `:app:assembleDebug` + `:app:testDebugUnitTest` both green. APK debug delta 67.75 MB → 110 MB (+42 MB unminified — Readium-navigator + readium-streamer + readium-shared AARs + appcompat + viewpager + browser + transitives. Per the format-epub.md APK budget the post-R8 release delta lands in the ~2.5 MB band; the unminified debug figure includes desugar runtime + appcompat the release build trims aggressively).
 
 ---
 
