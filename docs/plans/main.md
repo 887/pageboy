@@ -108,7 +108,7 @@ Goal: the screen the user lands on when they tap a document. Top bar (back, titl
 
 ---
 
-## Phase D — Markdown renderer — _Shipped: D.1–D.14 in commit `<pending>`_
+## Phase D — Markdown renderer — _Shipped: D.1–D.14 in commit `e01b2e1`_
 
 Goal: first real `DocumentRenderer` impl. `commonmark-java` 0.28.0 (BSD-2-Clause) + 6 GFM extensions; hand-rolled Compose `AnnotatedString` renderer (Markwon is dead — last release 2023-02 — not used). Code-block syntax highlighting deferred to v1.1; math out of scope; image rendering = placeholder card (Coil deferred to Phase F).
 
