@@ -116,9 +116,13 @@ private fun MarkdownScrollRestore(
   scrollSink: com.eight87.pageboy.domain.render.RendererScrollSink,
 ) {
   LaunchedEffect(documentId) {
-    val saved = scrollSink.load() ?: return@LaunchedEffect
-    val index = saved.pageIndex.coerceAtLeast(0)
-    val offset = (saved.offsetFraction * 1000f).toInt().coerceAtLeast(0)
+    // Pattern-match the sealed variant. Markdown only restores
+    // [ScrollPosition.LazyColumn] positions — older PDF positions or
+    // future EPUB CFI positions on the same document make no sense in
+    // a reflowable LazyColumn surface and are ignored.
+    val saved = scrollSink.load() as? ScrollPosition.LazyColumn ?: return@LaunchedEffect
+    val index = saved.itemIndex.coerceAtLeast(0)
+    val offset = saved.offset.coerceAtLeast(0)
     runCatching { listState.scrollToItem(index, scrollOffset = offset) }
   }
 }
@@ -137,12 +141,7 @@ private fun MarkdownScrollRecord(
     snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
       .distinctUntilChanged()
       .collect { (index, offset) ->
-        scrollSink.record(
-          ScrollPosition(
-            pageIndex = index,
-            offsetFraction = (offset.toFloat() / 1000f).coerceIn(0f, 1f),
-          ),
-        )
+        scrollSink.record(ScrollPosition.LazyColumn(itemIndex = index, offset = offset))
       }
   }
 }

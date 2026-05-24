@@ -91,4 +91,20 @@ interface DocumentDao {
     """
   )
   suspend fun setReadProgress(id: String, positionMs: Long, fraction: Float)
+
+  /**
+   * Phase F.2 — write the JSON-encoded sealed [ScrollPosition] +
+   * fraction together. Keeps the legacy [lastReadPositionMs] column
+   * cleared (the JSON column is the new source of truth post-Phase F).
+   */
+  @Query(
+    """
+    UPDATE documents
+       SET scroll_position_json = :positionJson,
+           read_fraction = :fraction,
+           last_read_position_ms = 0
+     WHERE documentId = :id
+    """
+  )
+  suspend fun setScrollPosition(id: String, positionJson: String?, fraction: Float)
 }

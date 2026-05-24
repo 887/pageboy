@@ -63,7 +63,13 @@ data class DocumentEntity(
   /** Epoch ms the user last opened the document. Null means never opened. */
   @ColumnInfo(name = "last_opened_at") val lastOpenedAt: Long? = null,
 
-  /** Where the user left off reading. 0 = un-started. Renderer-specific semantics in Phase C+. */
+  /**
+   * Where the user left off reading. 0 = un-started. Renderer-specific
+   * semantics in Phase C+. Phase F migration v1→v2 introduces
+   * [scrollPositionJson] as the new source of truth; this column stays
+   * for the legacy bit-packed encoding so v1 rows continue to decode
+   * cleanly when the JSON column is null.
+   */
   @ColumnInfo(name = "last_read_position_ms") val lastReadPositionMs: Long = 0L,
 
   /**
@@ -71,6 +77,19 @@ data class DocumentEntity(
    * EPUB spine position, text scroll fraction). 0.0 = un-started.
    */
   @ColumnInfo(name = "read_fraction") val readFraction: Float = 0f,
+
+  /**
+   * Phase F.2 — JSON-encoded `ScrollPosition` sealed variant. Null for
+   * documents the user hasn't scrolled yet, AND for v1 rows that still
+   * carry their position in the legacy [lastReadPositionMs] +
+   * [readFraction] columns (the chrome's `ScrollPersistence` decode
+   * path falls back to the legacy encoding when this column is null).
+   *
+   * One TEXT column rather than two (`kind` + `payload`) so future
+   * variants (EPUB CFI at Phase M) don't require another schema
+   * migration — only the JSON shape changes.
+   */
+  @ColumnInfo(name = "scroll_position_json") val scrollPositionJson: String? = null,
 
   /** User explicitly pinned this document via the overflow menu. */
   val pinned: Boolean = false,

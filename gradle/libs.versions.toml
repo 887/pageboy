@@ -55,6 +55,21 @@ documentfile = "1.1.0"
 # pass before the body reaches commonmark — avoids the snakeyaml-engine
 # transitive (~150 KB minified). See docs/plans/format-markdown.md.
 commonmark = "0.28.0"
+# Phase F — androidx.pdf:pdf-viewer-fragment 1.0.0-alpha18 (April 2026,
+# the locked version per format-pdf.md). Apache-2.0; minSdk 28 backport
+# via sdk-extension < 13; no native code in our APK (Pdfium runs inside
+# the system PdfRenderer service). Adds <600 KB universal APK delta;
+# transitively pulls androidx.pdf:pdf-viewer + pdf-document-service.
+# Annotation editing (Phase G) consumes the editable surface separately;
+# Phase F uses only the view side.
+androidxPdf = "1.0.0-alpha18"
+androidxFragment = "1.8.5"
+# Phase F — Coil 3.4.0 (May 2026, current stable line). Closes Phase D's
+# image-rendering deferral (markdown inline / standalone images). Pure-
+# Kotlin Apache-2.0; ~1 MB APK delta. Disk cache is disabled in v1 to
+# avoid leaking image bytes across reader sessions; revisit in v1.x once
+# the user has an explicit opt-in toggle.
+coil = "3.4.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -112,6 +127,21 @@ commonmark-ext-task-list-items = { module = "org.commonmark:commonmark-ext-task-
 commonmark-ext-autolink = { module = "org.commonmark:commonmark-ext-autolink", version.ref = "commonmark" }
 commonmark-ext-footnotes = { module = "org.commonmark:commonmark-ext-footnotes", version.ref = "commonmark" }
 commonmark-ext-image-attributes = { module = "org.commonmark:commonmark-ext-image-attributes", version.ref = "commonmark" }
+
+# Phase F — androidx.pdf view-side artifacts. pdf-viewer-fragment is the
+# entry point (hosts a Fragment carrying the PDF surface); pdf-viewer +
+# pdf-document-service join transitively. Listed explicitly so Licensee
+# inventories them and so version drift triggers a metadata diff.
+androidx-pdf-viewer-fragment = { module = "androidx.pdf:pdf-viewer-fragment", version.ref = "androidxPdf" }
+androidx-pdf-viewer = { module = "androidx.pdf:pdf-viewer", version.ref = "androidxPdf" }
+androidx-pdf-document-service = { module = "androidx.pdf:pdf-document-service", version.ref = "androidxPdf" }
+# AndroidFragment Compose interop — the host that lets a Compose tree
+# embed the PdfViewerFragment without dropping back to View hierarchies.
+androidx-fragment-compose = { module = "androidx.fragment:fragment-compose", version.ref = "androidxFragment" }
+# Phase F — Coil 3 (compose binding). coil-compose pulls coil-core +
+# coil-android transitively; we depend only on the binding so the
+# overall surface stays small.
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
