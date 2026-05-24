@@ -414,6 +414,34 @@ Audit of Phase M against this plan. Single Phase-M commit; EPUB renderer via Rea
 ### Test count: 149 → 172 (+14 EPUB + others). All green.
 
 ### Build: `:app:assembleDebug` + `:app:testDebugUnitTest` both green. APK debug delta 67.75 MB → 110 MB (+42 MB unminified — Readium-navigator + readium-streamer + readium-shared AARs + appcompat + viewpager + browser + transitives. Per the format-epub.md APK budget the post-R8 release delta lands in the ~2.5 MB band; the unminified debug figure includes desugar runtime + appcompat the release build trims aggressively).
+## Audit log — Phase Q
+
+(Phase Q = MOBI renderer, added 2026-05-24 after the initial 8-format
+brief. See [`docs/plans/format-mobi.md`](format-mobi.md) for the
+locked plan and library-decision rationale.)
+
+### Pre-merge checklist (8 items) — verdict per item
+
+1. **R.X.1 narrow interfaces** — PASS. `MobiRenderer` takes a single `MobiParser`. `MobiBody` takes `MobiHandle` + `RendererContext` + `Modifier`. `MobiWebViewClient` takes only the image map it resolves. No god-handle.
+2. **R.X.2 sealed dispatch** — PASS. `MobiParseError` is sealed (DrmDetected / UnsupportedCompression / MalformedContainer / EmptyContent). `MobiVariant` is sealed (Mobi6 / Kf8 / Combo). `MobiCompressionMode` is a sealed interface with companion-object constants for the raw spec values. No string-matching of exception messages anywhere; the parser throws `MobiParseException` wrapping the sealed value and consumers branch via exhaustive `when`.
+3. **R.X.3 composition root** — PASS. Only `AppGraph.kt` constructs `MobiRenderer`. UI takes `FormatRegistry`; the registry returns the wired renderer for `DocumentFormat.Mobi`. No chrome file references the renderer concretely.
+4. **R.X.4 file size** — PASS. Phase Q max LOC: `MobipocketHeaderReader.kt` 230, `MobiParser.kt` 179, `PalmDbReader.kt` 156, `MobiBody.kt` 126, `PalmDocDecompressor.kt` 121, `MobiImageExtractor.kt` 103, `Kf8Reader.kt` 95, `MobiRenderer.kt` 69, `MobiWebViewClient.kt` 64, `MobiParseError.kt` 64, `MobiVariant.kt` 55, `MobiTitleExtractor.kt` 29, `MobiHandle.kt` 26. Every file under 300 LOC (the R.X.4 250-LOC reading line is breached only by `MobipocketHeaderReader.kt` at 230 — well inside).
+5. **R.X.5 NotImplementedError** — PASS (one deferred-impl marker, explicit). `PalmDocDecompressor.huffCdicNotImplemented()` is the only `NotImplementedError` site; it is never called (the parser raises `MobiParseError.UnsupportedCompression(17480)` before reaching it) and carries the `// closed by v1.x — HUFF/CDIC decompression` inline comment per R.X.5. The MobiBody's scroll-restore is documented in code as "closed alongside Phase M's EPUB renderer when a `ScrollPosition.Pixel(y)` variant joins the sealed type" — no `NotImplementedError` for it, just a no-op `LaunchedEffect`.
+6. **R.X.6 wrong-direction imports** — PASS (same narrow O.C.1 exception). `grep -rn 'import com.eight87.pageboy.ui' format/mobi/` → zero hits. The only `format/mobi/` → `data/library/` imports are of `DocumentFormat` (the closed-enum renderer identity tag, per the documented O.C.1 exception). No `format/mobi/` → other `format/<sibling>/` imports.
+7. **R.X.7 Compose ISP** — PASS. `MobiBody` takes its `MobiHandle` + `RendererContext` + `Modifier`. The HTML rewriter `MobiHtmlRewriter` takes a single `String`. The WebViewClient takes only its image map. No god-state.
+8. **R.X.8 test discipline** — PASS. 45 new MOBI tests across 9 classes: `PalmDbReaderTest` (5), `MobipocketHeaderReaderTest` (8 — includes DRM-detection verification), `PalmDocDecompressorTest` (7), `MobiImageExtractorTest` (4), `MobiParserTest` (6 — includes KF8 combo dispatch verification + HUFF/CDIC error case), `MobiRendererTest` (5), `MobiHtmlRewriterTest` (5), `MobiWebViewClientTest` (3 — Robolectric), `MobiBodySmokeTest` (1 — Robolectric Compose). Plus 7 cases appended to `DocumentClassifierTest`. The R.X.9 contract (`DocumentRenderer` open/closed) is exercised end-to-end by `MobiRendererTest` + `FormatRegistryTest` (the latter unchanged but its assertions cover the new entry).
+
+### Phase Q audit observations
+
+**O.Q.1 — `MobiWebViewClient.shouldOverrideUrlLoading` swallows external links.** The v1 behaviour is "in-document anchors only" — external `http(s)://` links are swallowed rather than opened externally. The cleaner UX is "delegate external links to the chrome's open-with handler" (which the reader chrome ships at Phase N), but the chrome surface isn't wired to per-renderer events yet. Recorded for the Phase M generalisation: when the EPUB renderer lands the WebView host as a reusable composable, both EPUB and MOBI should route external-link clicks through a `RendererContext.externalLinkSink` callback (new narrow field on `RendererContext`). Until then, swallowing is the conservative choice — no surprise navigation.
+
+**O.Q.2 — Scroll-position persistence not wired.** The sealed `ScrollPosition` variants in `domain/render/` are `LazyColumn` (Markdown / TXT / DOCX / ODT / XLSX / ODS) and `PdfPage` (PDF). Neither fits a tall WebView surface. Adding a `Pixel(y: Int)` variant is the natural fit, but it lands cleanest alongside the EPUB renderer (Phase M) which has the identical shape. v1 MOBI ships without scroll restore — the user sees the document from the top on each re-open. The MobiBody has a placeholder `LaunchedEffect(context.documentId)` hook ready to receive the wired sink once `Pixel` exists.
+
+**O.Q.3 — `MobiCompressionMode` companion-object constants on the sealed interface.** Putting raw Int constants (`UNCOMPRESSED = 1`, `PALMDOC = 2`, `HUFF_CDIC = 17480`) on a sealed type's companion mixes the value and the type in one declaration. The alternative was a separate `MobiCompressionModeId` object — pure noise. The current shape lets `MobiCompressionMode.fromInt(raw)` return either the sealed variant (modes the parser ships) or null (everything else, including HUFF/CDIC which the parser rejects via the raw int). Recording the shape so the next sealed-type author doesn't pattern-match and spread companion-object constants across the codebase.
+
+### Test count: 165 → 210 (+45 in `format/mobi/` + 7 in the appended `DocumentClassifierTest`). All green. (Pre-Phase-Q non-mobi baseline = 158; the 7 new classifier cases plus 45 mobi cases land the +52 delta.)
+
+### Build: `:app:assembleDebug` + `:app:testDebugUnitTest` both green. APK debug delta 106,347,782 → 106,347,841 (+59 bytes unminified — the parser + WebView host code is small relative to the 100 MB baseline that includes Compose + Coil + POI; the minified release-mode delta estimate is the ~50–80 KB per format-mobi.md "APK-size budget"). Zero new Maven dependencies.
 
 ---
 

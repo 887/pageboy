@@ -129,11 +129,18 @@
     <string name="format_label_txt">plain text</string>
     <string name="format_label_pdf">PDF</string>
     <string name="format_label_epub">EPUB</string>
+    <string name="format_label_mobi">MOBI</string>
     <string name="format_label_docx">DOCX</string>
     <string name="format_label_xlsx">XLSX</string>
     <string name="format_label_odt">ODT</string>
     <string name="format_label_ods">ODS</string>
     <string name="format_label_unknown">this format</string>
+
+    <!-- Phase Q — MOBI error-state copy (per docs/plans/format-mobi.md spec gotchas). -->
+    <string name="mobi_error_drm_detected">This MOBI file is DRM-protected; pageboy does not support DRM. Try a DRM-free version.</string>
+    <string name="mobi_error_unsupported_compression">MOBI compression scheme not supported in this version (mode %1$d).</string>
+    <string name="mobi_error_malformed">MOBI file is malformed: %1$s</string>
+    <string name="mobi_error_empty">MOBI file has no readable content.</string>
 
     <!-- Phase C.8 — Reader settings section. -->
     <string name="settings_group_reader_display">Display</string>

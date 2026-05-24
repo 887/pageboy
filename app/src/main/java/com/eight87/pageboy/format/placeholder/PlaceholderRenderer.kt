@@ -127,6 +127,7 @@ private fun formatLabelRes(format: DocumentFormat): Int = when (format) {
   DocumentFormat.Txt -> R.string.format_label_txt
   DocumentFormat.Pdf -> R.string.format_label_pdf
   DocumentFormat.Epub -> R.string.format_label_epub
+  DocumentFormat.Mobi -> R.string.format_label_mobi
   DocumentFormat.Docx -> R.string.format_label_docx
   DocumentFormat.Xlsx -> R.string.format_label_xlsx
   DocumentFormat.Odt -> R.string.format_label_odt

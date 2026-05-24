@@ -267,6 +267,57 @@ Goal: `scripts/build-release-apk.sh` + the self-disabling `.github/workflows/rel
 
 ---
 
+## Phase Q — MOBI renderer _(added 2026-05-24, see [`format-mobi.md`](format-mobi.md))_ — _Shipped: Q.1–Q.9 in commit `873c56b`_
+
+Goal: read DRM-free MOBI / KF8 / AZW / AZW3 / PRC ebooks. Hand-rolled
+parser (no third-party dep — every Maven Central MOBI parser in 2026
+is GPL-licensed or dormant) + Android WebView host inside Compose
+`AndroidView`. DRM-protected files emit a friendly error state; no
+decryption attempt. KFX deferred to v1.x. HUFF/CDIC (compression mode
+17480) deferred to v1.x via sealed `MobiParseError.UnsupportedCompression`.
+
+(Phase Q comes after Phase O alphabetically because the plan-file
+naming convention puts `format-*.md` files in alphabetical order; the
+implementation-phase letter follows. P is reserved for the next gap
+filler should one land before P-something ships.)
+
+- [x] **Q.1** `Mobi` added to `DocumentFormat` enum + `format_label_mobi`
+      localized string.
+- [x] **Q.2** `DocumentClassifier` extended with PalmDB type/creator
+      code sniff (offsets 60..63 + 64..67) + extension fallback for
+      `.mobi` / `.azw` / `.azw3` / `.prc`.
+- [x] **Q.3** Manifest intent filters: `application/x-mobipocket-ebook`,
+      `application/vnd.amazon.ebook`, plus an `application/octet-stream`
+      catch-all with pathPatterns for the four extensions (covers
+      file-manager senders that don't know the MIME type).
+- [x] **Q.4** `format/mobi/` package shipped — `MobiRenderer`,
+      `MobiHandle`, `MobiParser`, `MobiBody` (Compose
+      `AndroidView<WebView>`), `MobiWebViewClient`, `MobiTitleExtractor`
+      at package root; `internal/PalmDbReader`,
+      `internal/MobipocketHeaderReader`, `internal/PalmDocDecompressor`,
+      `internal/Kf8Reader`, `internal/MobiImageExtractor`, plus sealed
+      `MobiParseError` / `MobiVariant` / `MobiCompressionMode`. Each
+      file under 300 LOC.
+- [x] **Q.5** `AppGraph.formatRegistry` wires
+      `DocumentFormat.Mobi to MobiRenderer()`.
+- [x] **Q.6** Sealed `MobiParseError` (DrmDetected / UnsupportedCompression
+      / MalformedContainer / EmptyContent) — error-state branching is
+      exhaustive sealed dispatch, not string-matching exception messages.
+- [x] **Q.7** 45 new tests across 9 classes (`PalmDbReaderTest`,
+      `MobipocketHeaderReaderTest`, `PalmDocDecompressorTest`,
+      `MobiImageExtractorTest`, `MobiParserTest`, `MobiRendererTest`,
+      `MobiHtmlRewriterTest`, `MobiWebViewClientTest`,
+      `MobiBodySmokeTest`) + 7 cases appended to `DocumentClassifierTest`.
+- [x] **Q.8** Build green (`:app:assembleDebug` + `:app:testDebugUnitTest`);
+      pre-merge 8-item checklist all PASS; APK debug delta +59 bytes
+      (parser code is small relative to 100 MB baseline; minified
+      release-mode delta estimate ~50–80 KB per format-mobi.md budget).
+- [x] **Q.9** This plan section landed; `format-mobi.md` ticked;
+      `format-research.md` reading order updated;
+      `refactor-solid.md` Phase Q audit log appended.
+
+---
+
 ## Beyond Phase O
 
 Open questions for a later planning pass — placeholders, not commitments:

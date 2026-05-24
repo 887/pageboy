@@ -31,6 +31,7 @@ import com.eight87.pageboy.format.epub.EpubParser
 import com.eight87.pageboy.format.epub.EpubRenderer
 import com.eight87.pageboy.format.markdown.MarkdownParser
 import com.eight87.pageboy.format.markdown.MarkdownRenderer
+import com.eight87.pageboy.format.mobi.MobiRenderer
 import com.eight87.pageboy.format.pdf.PdfRenderer
 import com.eight87.pageboy.format.odt.OdtRenderer
 import com.eight87.pageboy.format.ods.OdsRenderer
@@ -240,6 +241,13 @@ class AppGraph(private val context: Context) {
         // use). Core library desugaring enabled. LCP DRM deliberately
         // out — proprietary blob, not on the allowlist.
         DocumentFormat.Epub to EpubRenderer(epubParser),
+        // Phase Q — MOBI / KF8 / AZW / AZW3 via hand-rolled parser +
+        // WebView host (no third-party dep — every Maven Central MOBI
+        // parser available in 2026 is GPL-licensed or dormant, see
+        // docs/plans/format-mobi.md "Library candidates evaluated").
+        // DRM-protected files emit a friendly error state; no
+        // decryption attempt.
+        DocumentFormat.Mobi to MobiRenderer(),
       ),
     )
   }

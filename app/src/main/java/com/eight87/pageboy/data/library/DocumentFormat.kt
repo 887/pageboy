@@ -18,6 +18,7 @@ enum class DocumentFormat {
   Txt,
   Pdf,
   Epub,
+  Mobi,
   Docx,
   Xlsx,
   Odt,
