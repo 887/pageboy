@@ -1,5 +1,7 @@
 package com.eight87.pageboy.format.pdf
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -10,7 +12,6 @@ import androidx.compose.ui.semantics.testTag
 import androidx.fragment.compose.AndroidFragment
 import androidx.pdf.viewer.fragment.PdfViewerFragment
 import com.eight87.pageboy.domain.render.RendererContext
-import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * Phase F.3 — Compose body for the PDF renderer. Hosts the androidx.pdf
@@ -51,19 +52,59 @@ internal fun PdfBody(
   val uri = handle.uri
   val fragmentKey = remember(uri) { uri.toString() }
 
-  AndroidFragment<PdfViewerFragment>(
-    modifier = modifier
-      .fillMaxSize()
-      .semantics { testTag = "pdf_body" },
-    onUpdate = { fragment ->
-      // setDocumentUri triggers the sandbox open lifecycle. Idempotent
-      // — calling with the same URI re-runs the resume path which
-      // re-binds the fragment's UI; calling with a new URI re-loads.
-      if (fragment.documentUri != uri) {
-        fragment.documentUri = uri
+  Column(modifier = modifier.fillMaxSize()) {
+    // Phase G.4 — annotation toolbar appears below the chrome's top
+    // app bar when a tool is selected from the reader overflow menu.
+    // Reads the tool state straight off the chrome's annotation
+    // commands; null when annotations aren't wired (test chrome).
+    val annotationCommands = context.annotationCommands
+    if (annotationCommands != null) {
+      PdfAnnotationToolbar(commands = annotationCommands)
+    }
+
+    // Z-stack: PdfViewerFragment underneath, annotation overlay on
+    // top. Pointer events route through the overlay when a tool is
+    // active; pass through to the fragment for read-mode otherwise
+    // (the overlay's pointerInput modifier is conditionally applied
+    // inside PdfAnnotationOverlay).
+    Box(modifier = Modifier.fillMaxSize()) {
+      AndroidFragment<PdfViewerFragment>(
+        modifier = Modifier
+          .fillMaxSize()
+          .semantics { testTag = "pdf_body" },
+        onUpdate = { fragment ->
+          // setDocumentUri triggers the sandbox open lifecycle.
+          // Idempotent — calling with the same URI re-runs the resume
+          // path which re-binds the fragment's UI; calling with a new
+          // URI re-loads.
+          if (fragment.documentUri != uri) {
+            fragment.documentUri = uri
+          }
+        },
+      )
+
+      // Phase G.4 — overlay drawn ON TOP via z-stack. v1 sizes
+      // against the page metadata on the handle (pageCount-aware
+      // multi-page rendering lands when androidx.pdf exposes
+      // `currentPage` publicly per format-pdf.md F.2 comment).
+      val annotationSource = context.annotationSource
+      if (annotationSource != null && annotationCommands != null) {
+        PdfAnnotationOverlay(
+          documentId = context.documentId,
+          // Default A4 portrait metrics when the actual page size
+          // isn't exposed yet by androidx.pdf alpha18; the overlay
+          // uses these only as the un-rotated coordinate frame —
+          // annotations stay portable across the eventual API uplift.
+          pageWidthPt = 612f,
+          pageHeightPt = 792f,
+          pageRotationDegrees = 0,
+          annotationSource = annotationSource,
+          annotationCommands = annotationCommands,
+          modifier = Modifier.fillMaxSize(),
+        )
       }
-    },
-  )
+    }
+  }
 
   // Find-in-doc bridge — observe the chrome's query, flip the
   // fragment's search bar on when it goes non-empty.

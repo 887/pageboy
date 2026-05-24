@@ -201,7 +201,7 @@ interface ShareExportCommands        // share / save-as / export-with-annotation
 
 The reader chrome takes only what it renders; each per-format renderer takes what it needs and ignores the rest. Phase D (Markdown) needs `ReaderStateProjector` + `ScrollPersistence`; Phase G (PDF annotation) needs `AnnotationCommands`; etc.
 
-- [x] **R.C.1** Phase C defines the narrow interfaces above (or the subset Phase C ships; later phases extend). _shipped: `ReaderStateProjector` + `ScrollPersistence` + `FindInDocCommands` + `ShareExportCommands` each in its own file under `ui/reader/control/`. `AnnotationCommands` + `SignatureCommands` deferred to Phase G/H per R.X.5 (not declared as stub interfaces — the deferral is recorded here, not in the codebase, so no LSP-violating `NotImplementedError` exists)._
+- [x] **R.C.1** Phase C defines the narrow interfaces above (or the subset Phase C ships; later phases extend). _shipped: `ReaderStateProjector` + `ScrollPersistence` + `FindInDocCommands` + `ShareExportCommands` each in its own file under `ui/reader/control/`. `AnnotationCommands` shipped in Phase G in `domain/render/annotation/` (neutral package — both `format/pdf/` overlay + `ui/reader/control/annotation/` concrete impl import without R.X.6 violation). `SignatureCommands` still deferred to Phase H. The R.X.5 "no Liskov-stub interface" pattern held — `AnnotationCommands` landed in the same commit as its first consumer (`PdfAnnotationOverlay`)._
 - [x] **R.C.2** Reader chrome takes interface params, not a god controller. _`ReaderScreen` constructor takes `ReaderStateProjector` + `FormatRegistry` + `FindInDocCommands` + `ShareExportCommands` — four narrow interfaces, no god controller._
 - [x] **R.C.3** Phase D+ renderers take only the interfaces they need. _shipped in Phase E — Markdown reads `RendererScrollSink` + `RendererFindSink`; TXT reads both; PlaceholderRenderer reads neither. Interface widening via `RendererContext` value type so adding handles (Phase G annotation, Phase H signature) is a new field on the data class, not another `Body()` signature change._
 - [x] **R.C.4** Reader root file under ~200 LOC; per-axis controllers in their own files. _`ReaderScreen.kt` is 132 LOC; max file in `ui/reader/` is 132 LOC (`ReaderScreen.kt`); max in `ui/reader/control/` is 111 LOC (`ReaderStateProjector.kt`)._
@@ -380,6 +380,43 @@ R.C.3 sub-step (Phase D+ renderers take only the interfaces they need) now ticke
 ### Test count: 104 → 149 (+45). All green.
 
 ### Build: `:app:assembleDebug` + `:app:testDebugUnitTest` both green. APK debug delta 67.8 MB → 67.75 MB (-50 KB unminified — the TXT renderer + `domain/render/` neutral types are pure JVM stdlib, no new deps; the negative delta is build noise from cache-line packing of the dex output).
+
+---
+
+## Audit log — Phase G
+
+Audit of Phase G against this plan. PDF annotation overlay (Room source of truth) + OpenPDF export-with-annotations path. Closes Phase D O.G deferral.
+
+### Pre-merge checklist (8 items) — verdict per item
+
+1. **R.X.1 narrow interfaces** — PASS. `AnnotationSource` (3-method observe-only) and `AnnotationStore` (4-method write) split per the family R.A pattern. `AnnotationCommands` is 5 members, takes `AnnotationStore` only (not the rich repository). `PdfAnnotationExporter` takes a JSON decoder + the input/output streams + the annotation list — no `Context`, no `AnnotationStore` (the caller reads rows out itself).
+2. **R.X.2 sealed dispatch** — PASS. `AnnotationKind` is a closed enum; per-kind dispatch in three sites (`PdfAnnotationOverlay.drawAnnotation`, `PdfAnnotationExporter.buildPdfAnnotation`, the gesture handler's `composeTapAnnotation`) is exhaustive `when` on the enum. `AnnotationPayload` is a sealed class with `kotlinx.serialization` driving the JSON discriminator (`"kind"`). No `if (kind == "Highlight")` chains.
+3. **R.X.3 composition root** — PASS. Only `AppGraph.kt` constructs `AnnotationRepository`, `AndroidAnnotationCommands`, `PdfAnnotationExporter`. Composables take `AnnotationCommands` + `AnnotationSource` only.
+4. **R.X.4 file size** — PASS. Max new file: `PdfAnnotationOverlay.kt` 268 LOC, `PdfAnnotationExporter.kt` 173 LOC, `AndroidAnnotationCommands.kt` 80 LOC, `PdfAnnotationToolbar.kt` 86 LOC, `PdfCoordinates.kt` 145 LOC. None past the 400-LOC R.D.2 threshold. `ReaderScreen.kt` grew 132 → 196 LOC for the SAF export launcher wiring + the canExport gate, still under the ~200 LOC R.C.4 ceiling.
+5. **R.X.5 NotImplementedError** — PASS. None present. Three explicit deferrals documented inline: (a) `updateStickyNote` is a no-op pending bottom-sheet integration (text edits route through `add(entity)` REPLACE semantics in v1), (b) live ink stroke capture via `androidx.ink.authoring.compose.InProgressStrokesView` (Phase G+), (c) multi-page overlay (currently page 0 only, blocked on androidx.pdf alpha18 not exposing `currentPage` publicly).
+6. **R.X.6 wrong-direction imports** — PASS (with one new narrow exception, documented below). `format/pdf/` → `domain/render/annotation/AnnotationCommands` — clean (neutral package). `domain/render/annotation/` → `data/annotation/` — the new narrow exception (see O.G.1). `format/` continues to NOT import `ui/`. `ui/` → `data/annotation/` is fine (chrome may always reach data layer). The chrome adapter (`AndroidAnnotationCommands`) is the only file that crosses both interfaces.
+7. **R.X.7 Compose ISP** — PASS. `PdfAnnotationOverlay` takes 6 narrow inputs (documentId, two floats, an int, `AnnotationSource`, `AnnotationCommands`). `PdfAnnotationToolbar` takes 1 (`AnnotationCommands`). `RendererContext` gained two new nullable fields (`annotationCommands` + `annotationSource`) — non-PDF renderers ignore them.
+8. **R.X.8 test discipline** — PASS. 50 new tests across 6 classes: `AnnotationDaoTest` (8), `AnnotationRepositoryTest` (7), `PdfCoordinatesTest` (12), `AndroidAnnotationCommandsTest` (8), `PdfAnnotationExporterTest` (11), `PdfAnnotationOverlaySmokeTest` (4). Total 158 → 208 (0 failures).
+
+### Phase G audit observations
+
+**O.G.1 — `domain/render/annotation/` → `data/annotation/` is a deliberate narrow exception.** Same shape as the Phase C `format/ → data/library/DocumentFormat` exception (O.C.1) — the rule's spirit is "no domain or format code imports a repository / scanner / DAO", and pure value types (`AnnotationEntity`, sealed `AnnotationPayload`, `PdfPoint`, `PdfRect`, `AnnotationKind` enum) don't carry that risk. The `AnnotationDao` interface itself stays in `data/annotation/`; only the entity + payload value types cross the line. Recording the exception here so future audits know it was deliberate, not drift. Migrating `AnnotationEntity` to a separate value-only package + a Room-shaped variant inside `data/annotation/` is the clean fix when a second consumer earns the churn (likely Phase H when signature placements join).
+
+**O.G.2 — Phase D O.G (annotation overlay-vs-burn-in deferral) CLOSED.** Phase D recorded the annotation persistence model as deferred until Phase G could pick the right tradeoff per format-pdf.md. Phase G ships the locked posture: Room as source of truth (option C) — original PDFs never mutated; the OpenPDF export path is the explicit, user-initiated "bake annotations into a PDF copy" flow accessible via the reader overflow + a SAF save-as launcher.
+
+**O.G.3 — OpenPDF dual-licence handling in Licensee.** OpenPDF 2.0.5 is MPL-2.0 OR LGPL-2.1+. Licensee can't natively express "OR" pick semantics, so we explicitly `allowDependency("com.github.librepdf", "openpdf", "2.0.5")` with a `because("Dual MPL-2.0 / LGPL-2.1+; pageboy uses the MPL-2.0 leg.")` clause. LGPL is NOT on the family allowlist (and shouldn't be — the per-artifact allow is the right narrow exception). The build comment in `build.gradle.kts` makes the choice explicit.
+
+**O.G.4 — `java.awt.Color` avoided via direct `/C` array writes.** OpenPDF's high-level `PdfAnnotation.setColor(java.awt.Color)` is the obvious API but routes through a class Android doesn't ship. We bypass via `put(PdfName.C, PdfArray)` with three float values (RGB 0-1). Documented in `PdfAnnotationExporter.applyColor()`. Verified by `PdfAnnotationExporterTest.applied color writes a 3-element C array`.
+
+**O.G.5 — Live ink + multi-page overlay are Phase G+ polish.** The pointer-input pipeline ships single-tap-and-commit semantics for every tool; the proper drag-rectangle + continuous-pen-stroke flow earn their keep alongside `androidx.ink.authoring.compose.InProgressStrokesView` (format-pdf.md G.3). Multi-page overlay rendering blocks on androidx.pdf exposing a public `currentPage` flow — the overlay's coordinate frame is page-aware (every row carries `pageWidthPt` + `pageHeightPt`), so the page-index plumbing is the only thing the next alpha needs.
+
+### R.C sub-step note
+
+R.C.1 amended to record that `AnnotationCommands` landed in `domain/render/annotation/` (not `ui/reader/control/`) so `format/pdf/PdfAnnotationOverlay` can import it without crossing into `ui/`. The R.X.5 "no Liskov stub interface" pattern still holds — the interface and its first consumer (`PdfAnnotationOverlay`) ship in the same commit.
+
+### Test count: 158 → 208 (+50). All green.
+
+### Build: `:app:assembleDebug` + `:app:testDebugUnitTest` both green. APK debug delta +2.4 MB (OpenPDF 2.0.5 unminified; R8 minified estimate ~1.5 MB per format-pdf.md budget). Schema 2 → 3 migration committed.
 
 ---
 

@@ -1,5 +1,6 @@
 package com.eight87.pageboy.ui.reader.control
 
+import com.eight87.pageboy.data.annotation.AnnotationSource
 import com.eight87.pageboy.data.settings.ReaderSettings
 import com.eight87.pageboy.domain.render.RendererContext
 import com.eight87.pageboy.domain.render.RendererFindSink
@@ -7,6 +8,7 @@ import com.eight87.pageboy.domain.render.RendererReadingPrefs
 import com.eight87.pageboy.domain.render.RendererScrollSink
 import com.eight87.pageboy.domain.render.ScrollPosition
 import com.eight87.pageboy.domain.render.FindMatch
+import com.eight87.pageboy.domain.render.annotation.AnnotationCommands
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -86,11 +88,15 @@ fun buildRendererContext(
   scrollPersistence: ScrollPersistence,
   findCommands: InMemoryFindInDocCommands,
   readingPrefs: RendererReadingPrefs,
+  annotationCommands: AnnotationCommands? = null,
+  annotationSource: AnnotationSource? = null,
 ): RendererContext = RendererContext(
   documentId = documentId,
   scrollSink = DefaultRendererScrollSink(documentId, scrollPersistence),
   findSink = DefaultRendererFindSink(findCommands),
   readingPrefs = readingPrefs,
+  annotationCommands = annotationCommands,
+  annotationSource = annotationSource,
 )
 
 /**

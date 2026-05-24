@@ -1,5 +1,7 @@
 package com.eight87.pageboy.domain.render
 
+import com.eight87.pageboy.data.annotation.AnnotationSource
+import com.eight87.pageboy.domain.render.annotation.AnnotationCommands
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -30,6 +32,22 @@ data class RendererContext(
   val scrollSink: RendererScrollSink,
   val findSink: RendererFindSink,
   val readingPrefs: RendererReadingPrefs,
+  /**
+   * Phase G.3 — annotation authoring handle. Null when the renderer
+   * doesn't support annotations (Markdown / TXT etc.). PDF renderer
+   * always receives a non-null handle so the toolbar / overlay can
+   * compose against it (R.X.5 — no nullable-and-throw-on-call shape
+   * inside the chrome's PDF body).
+   */
+  val annotationCommands: AnnotationCommands? = null,
+
+  /**
+   * Phase G.4 — observe-only annotation source. Same nullability
+   * contract as [annotationCommands]: present when the renderer
+   * supports annotations, null otherwise. The PDF overlay subscribes
+   * to this for the per-page annotation list.
+   */
+  val annotationSource: AnnotationSource? = null,
 )
 
 /**

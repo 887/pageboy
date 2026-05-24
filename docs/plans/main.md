@@ -1,6 +1,6 @@
 # pageboy — main build plan
 
-## Status: 🟢 Phase E shipped; Phase F next
+## Status: 🟢 Phases A–G shipped; Phase H next (PDF signing)
 
 _Phase 0 verified, Phase A shipped (buildable Compose APK with family chrome — vertical nav rail, top bar, settings catalog DSL, AboutScreen, LicensesScreen, Licensee inventory). Phase B shipped (multi-root SAF document library — Room schema, four folder modes, magic-byte + extension classifier covering all 8 formats, scanner + rescan coordinator + repository, LibraryScreen with four whisperboy-style tabs + filters + search + sort, folders management screen, scan progress banner, Library settings section). Phases C+ are **stub headers** awaiting per-format research (see [`format-research.md`](format-research.md)) — each one names the format-research plan it depends on, and the research agent who owns that plan is expected to fill in the sub-step checkboxes for the corresponding phase before any implementation lands._
 
@@ -151,9 +151,24 @@ Goal: render PDF pages, scroll smoothly through 500+ page documents, find-in-doc
 
 ---
 
-## Phase G — PDF annotation _(stub — depends on `docs/plans/format-pdf.md`)_
+## Phase G — PDF annotation — _Shipped: G.1–G.9 (this commit; closes Phase D O.G deferral)_
 
-Goal: highlight, underline, strike-through, sticky note, freehand ink. Annotations persist as overlays (own table in Room) and on save get serialized back into the PDF (PDF 1.7 annotation dictionaries) so the annotated file opens correctly in every other PDF viewer. The annotation-overlay-vs-burn-in tradeoff is a major design decision documented in the research plan.
+Goal: highlight / underline / strikethrough / freehand ink / sticky-note / stamp. Annotations live in Room as overlay rows (per `docs/plans/format-pdf.md` decision (C)); the original PDF is never mutated. An explicit "Export with annotations…" reader-overflow entry bakes the rows into a PDF copy via OpenPDF (MPL-2.0) so other readers see them.
+
+- [x] **G.1** Room v2 → v3 — add `AnnotationEntity` + sealed `AnnotationKind` (Highlight / Underline / Strikethrough / FreehandInk / StickyNote / Stamp) + `AnnotationDao` + additive migration. Per-document + per-page observe; soft-delete + restore.
+- [x] **G.2** Narrow R.X.1 data interfaces — `AnnotationSource` (observe-only) + `AnnotationStore` (write). Single concrete `AnnotationRepository`.
+- [x] **G.3** `AnnotationCommands` interface in `domain/render/annotation/` (closes Phase C deferral). `AndroidAnnotationCommands` concrete impl wires the chrome → store.
+- [x] **G.4** `PdfAnnotationOverlay` Composable z-stacks over `PdfBody` fragment; `PdfAnnotationToolbar` reveals when a tool is active. Per-kind `Canvas` draw dispatch.
+- [x] **G.5** `PdfCoordinates` in `format/pdf/internal/` — pure JVM-testable conversions between PDF user-space (origin BL, points) and Compose pixel-space, respecting 0/90/180/270 rotations.
+- [x] **G.6** OpenPDF 2.0.5 (MPL-2.0). `PdfAnnotationExporter` writes annotations as PDF 1.7 `/Annot` dictionaries (`/Highlight`, `/Underline`, `/StrikeOut`, `/Ink`, `/Text`, `/Stamp`). Color via direct `/C` array — no `java.awt.Color`. "Export with annotations…" overflow entry + SAF `CreateDocument("application/pdf")` launcher.
+- [x] **G.7** 50 new tests across 6 classes — `AnnotationDaoTest` (8), `AnnotationRepositoryTest` (7), `PdfCoordinatesTest` (12), `AndroidAnnotationCommandsTest` (8), `PdfAnnotationExporterTest` (11), `PdfAnnotationOverlaySmokeTest` (4). Total: 158 → 208 (0 failures).
+- [x] **G.8** `:app:assembleDebug` + `:app:testDebugUnitTest` both green. Debug APK delta: +2.4 MB (OpenPDF). Pre-merge checklist (8 items) all PASS.
+- [x] **G.9** This main.md ticked; `refactor-solid.md` Phase G audit appended (O.G closed; the R.X.6 narrow exception for `format/` → `data/annotation/` value types is documented inline alongside the existing `DocumentFormat` exception).
+
+Deferrals carried into later phases:
+ - **Live pen-pressure capture** via `androidx.ink.authoring.compose.InProgressStrokesView` — v1 ships a single-tap-and-commit ink path; the continuous-stroke + pressure-curve flow is a Phase G+ polish (named in `format-pdf.md` G.3).
+ - **Multi-page rendering** in the overlay — v1 assumes page 0 because androidx.pdf alpha18 doesn't expose `currentPage` publicly; the overlay's coordinate frame is page-aware (`pageWidthPt` / `pageHeightPt` ride on every row), so the multi-page uplift is just plumbing through whichever public API the next alpha exposes.
+ - **PAdES cryptographic signing** — Phase H. The signing dependencies (Bouncy Castle bcprov + bcpkix) are explicitly excluded from the Phase G OpenPDF pull; Phase H re-adds them.
 
 ---
 

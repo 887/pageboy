@@ -114,6 +114,9 @@
     <string name="reader_share_cd">Share</string>
     <string name="reader_overflow_cd">More options</string>
     <string name="reader_overflow_empty_label">No actions yet</string>
+    <string name="reader_export_with_annotations_label">Export with annotations…</string>
+    <string name="reader_export_with_annotations_success">Exported %1$d annotation(s)</string>
+    <string name="reader_export_with_annotations_failure">Export failed</string>
     <string name="reader_opening_label">Opening…</string>
     <string name="reader_error_headline">Could not open document</string>
     <string name="reader_error_retry">Retry</string>

@@ -5,6 +5,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
+import com.eight87.pageboy.data.annotation.AnnotationRepository
+import com.eight87.pageboy.data.annotation.AnnotationSource
+import com.eight87.pageboy.data.annotation.AnnotationStore
 import com.eight87.pageboy.data.library.AndroidLibraryRescanCoordinator
 import com.eight87.pageboy.data.library.AndroidLibraryUiSettings
 import com.eight87.pageboy.data.library.AndroidPersistedUriPermissionStore
@@ -23,6 +26,7 @@ import com.eight87.pageboy.format.docx.DocxRenderer
 import com.eight87.pageboy.format.markdown.MarkdownParser
 import com.eight87.pageboy.format.markdown.MarkdownRenderer
 import com.eight87.pageboy.format.pdf.PdfRenderer
+import com.eight87.pageboy.format.pdf.export.PdfAnnotationExporter
 import com.eight87.pageboy.format.odt.OdtRenderer
 import com.eight87.pageboy.format.ods.OdsRenderer
 import com.eight87.pageboy.format.registry.CompiledFormatRegistry
@@ -38,6 +42,7 @@ import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
 import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
 import com.eight87.pageboy.ui.reader.control.ScrollPersistence
 import com.eight87.pageboy.ui.reader.control.ShareExportCommands
+import com.eight87.pageboy.ui.reader.control.annotation.AndroidAnnotationCommands
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -72,7 +77,8 @@ class AppGraph(private val context: Context) {
       // Phase F.2 — v1 → v2 adds scroll_position_json TEXT column. The
       // migration is additive (ALTER TABLE ADD COLUMN with no default,
       // null-tolerant) so old rows preserve their per-document state.
-      .addMigrations(LibraryDatabase.MIGRATION_1_2)
+      // Phase G.1 — v2 → v3 adds the `annotations` table (additive).
+      .addMigrations(LibraryDatabase.MIGRATION_1_2, LibraryDatabase.MIGRATION_2_3)
       .build()
   }
 
@@ -96,6 +102,27 @@ class AppGraph(private val context: Context) {
 
   // Narrow handles the UI sees.
   val documentSource: DocumentSource get() = libraryRepository
+
+  /**
+   * Phase G.1 — annotation overlay store. Single concrete
+   * [AnnotationRepository] implementing both [AnnotationSource]
+   * (observe-only) + [AnnotationStore] (write); exposed separately so
+   * the overlay (read) and the chrome's `AndroidAnnotationCommands`
+   * (write) take only the surface they need (R.X.1 narrow interfaces).
+   */
+  private val annotationRepository: AnnotationRepository by lazy {
+    AnnotationRepository(database.annotationDao())
+  }
+
+  val annotationSource: AnnotationSource get() = annotationRepository
+  val annotationStore: AnnotationStore get() = annotationRepository
+
+  /**
+   * Phase G.6 — OpenPDF-backed exporter. App-scoped instance — the
+   * exporter itself is stateless beyond its JSON decoder, so one
+   * instance for the whole app is fine.
+   */
+  val pdfAnnotationExporter: PdfAnnotationExporter by lazy { PdfAnnotationExporter() }
 
   private val scanner: SafLibraryScanner by lazy {
     SafLibraryScanner(
@@ -202,6 +229,17 @@ class AppGraph(private val context: Context) {
    * documents.
    */
   val findInDocCommandsFactory: () -> InMemoryFindInDocCommands = { InMemoryFindInDocCommands() }
+
+  /**
+   * Phase G.3 — factory per reader instance. Annotation tool +
+   * color state is per-document (the active tool / color the user
+   * picked); tearing it down when leaving the reader keeps state
+   * from leaking across documents (same lifecycle pattern
+   * `findInDocCommandsFactory` uses).
+   */
+  val annotationCommandsFactory: () -> AndroidAnnotationCommands = {
+    AndroidAnnotationCommands(store = annotationStore)
+  }
 
   val shareExportCommands: ShareExportCommands by lazy {
     AndroidShareExportCommands(context.applicationContext)

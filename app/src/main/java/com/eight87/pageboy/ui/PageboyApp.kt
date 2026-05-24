@@ -49,6 +49,9 @@ import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
 import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
 import com.eight87.pageboy.ui.reader.control.ScrollPersistence
 import com.eight87.pageboy.ui.reader.control.ShareExportCommands
+import com.eight87.pageboy.ui.reader.control.annotation.AndroidAnnotationCommands
+import com.eight87.pageboy.data.annotation.AnnotationSource
+import com.eight87.pageboy.format.pdf.export.PdfAnnotationExporter
 import com.eight87.pageboy.ui.settings.AboutScreen
 import com.eight87.pageboy.ui.settings.LicensesScreen
 import com.eight87.pageboy.ui.settings.SettingsScreen
@@ -104,6 +107,12 @@ fun PageboyApp(
   val findFactory: (() -> InMemoryFindInDocCommands)? = appGraph?.findInDocCommandsFactory
   val effectiveScrollPersistence: ScrollPersistence? = appGraph?.scrollPersistence
   val effectiveReadingPrefs: RendererReadingPrefs? = appGraph?.rendererReadingPrefs
+  // Phase G — annotation surfaces. Null when running outside a real
+  // PageboyApplication (unit-test chrome), in which case the reader
+  // composes without the annotation toolbar / overlay.
+  val annotationFactory: (() -> AndroidAnnotationCommands)? = appGraph?.annotationCommandsFactory
+  val effectiveAnnotationSource: AnnotationSource? = appGraph?.annotationSource
+  val effectivePdfExporter: PdfAnnotationExporter? = appGraph?.pdfAnnotationExporter
 
   // Touch the coordinator so the lazy block runs and start() fires.
   LaunchedEffect(effectiveCoordinator) { /* trigger lazy init */ }
@@ -247,6 +256,7 @@ fun PageboyApp(
             // One FindInDocCommands per reader instance — find state is
             // per-document, see AppGraph.findInDocCommandsFactory.
             val find = remember(route.documentId) { findFactory() }
+            val annotationCommands = remember(route.documentId) { annotationFactory?.invoke() }
             ReaderScreen(
               documentId = route.documentId,
               readerStateProjector = effectiveProjector,
@@ -255,6 +265,9 @@ fun PageboyApp(
               shareExportCommands = effectiveShareCommands,
               scrollPersistence = effectiveScrollPersistence,
               readingPrefs = effectiveReadingPrefs,
+              annotationCommands = annotationCommands,
+              annotationSource = effectiveAnnotationSource,
+              pdfAnnotationExporter = effectivePdfExporter,
               onBack = { backStack.removeLastOrNull() },
             )
           }

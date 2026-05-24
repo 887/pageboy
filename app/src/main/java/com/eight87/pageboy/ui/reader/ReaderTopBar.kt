@@ -50,6 +50,7 @@ internal fun ReaderTopBar(
   onBack: () -> Unit,
   onToggleFind: () -> Unit,
   onShare: () -> Unit,
+  onExportWithAnnotations: (() -> Unit)? = null,
 ) {
   var overflowOpen by remember { mutableStateOf(false) }
   TopAppBar(
@@ -114,13 +115,25 @@ internal fun ReaderTopBar(
         expanded = overflowOpen,
         onDismissRequest = { overflowOpen = false },
       ) {
-        // Phase C ships the menu with a single "no actions yet" entry.
-        // Phase G+ adds annotation / bookmark / signature entries here.
-        DropdownMenuItem(
-          text = { Text(stringResource(R.string.reader_overflow_empty_label)) },
-          onClick = { overflowOpen = false },
-          enabled = false,
-        )
+        if (onExportWithAnnotations != null) {
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.reader_export_with_annotations_label)) },
+            onClick = {
+              overflowOpen = false
+              onExportWithAnnotations()
+            },
+            modifier = Modifier.semantics { testTag = "reader_export_annotations_item" },
+          )
+        } else {
+          // Phase C ships the menu with a single "no actions yet" entry
+          // for formats without annotation support; Phase G+ adds the
+          // export entry above whenever the renderer is the PDF one.
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.reader_overflow_empty_label)) },
+            onClick = { overflowOpen = false },
+            enabled = false,
+          )
+        }
       }
     },
   )

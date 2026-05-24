@@ -12,8 +12,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import com.eight87.pageboy.R
+import com.eight87.pageboy.data.annotation.AnnotationSource
 import com.eight87.pageboy.domain.render.RendererContext
 import com.eight87.pageboy.domain.render.RendererReadingPrefs
+import com.eight87.pageboy.domain.render.annotation.AnnotationCommands
 import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
 import com.eight87.pageboy.ui.reader.control.ReaderState
@@ -43,6 +45,8 @@ internal fun ReaderBody(
   scrollPersistence: ScrollPersistence,
   findCommands: InMemoryFindInDocCommands,
   readingPrefs: RendererReadingPrefs,
+  annotationCommands: AnnotationCommands? = null,
+  annotationSource: AnnotationSource? = null,
   onRetry: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -69,12 +73,14 @@ internal fun ReaderBody(
       is ReaderState.Open -> {
         val handle = state.handle
         val renderer = formatRegistry.rendererFor(handle.format)
-        val context = remember(documentId, scrollPersistence, findCommands, readingPrefs) {
+        val context = remember(documentId, scrollPersistence, findCommands, readingPrefs, annotationCommands, annotationSource) {
           buildRendererContext(
             documentId = documentId,
             scrollPersistence = scrollPersistence,
             findCommands = findCommands,
             readingPrefs = readingPrefs,
+            annotationCommands = annotationCommands,
+            annotationSource = annotationSource,
           )
         }
         renderer.Body(handle = handle, context = context, modifier = Modifier.fillMaxSize())

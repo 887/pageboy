@@ -136,6 +136,18 @@ licensee {
     // license via opensource.org's new URL path (/license/mit instead
     // of /licenses/MIT); whitelist that URL so Licensee maps it to MIT.
     allowUrl("https://opensource.org/license/mit")
+    // Phase G — OpenPDF 2.0.5 is dual-licensed MPL-2.0 OR
+    // LGPL-2.1+. The Maven POM lists both; we pick MPL-2.0 (per
+    // docs/plans/format-pdf.md license-gate analysis). Allowlist the
+    // Mozilla MPL URL so Licensee resolves the MPL leg cleanly +
+    // explicitly allow the dependency so the LGPL leg doesn't trip
+    // the "LGPL-2.1-only not allowed" gate (we deliberately don't add
+    // LGPL to the family allowlist; the per-artifact allow is the
+    // narrow exception).
+    allowUrl("https://www.mozilla.org/en-US/MPL/2.0/")
+    allowDependency("com.github.librepdf", "openpdf", "2.0.5") {
+        because("Dual MPL-2.0 / LGPL-2.1+; pageboy uses the MPL-2.0 leg.")
+    }
 }
 
 // oss-licenses A.4 — copy the per-variant Licensee `artifacts.json` into
@@ -303,5 +315,23 @@ dependencies {
   implementation(libs.xlsx.streamer) {
     exclude(group = "org.apache.logging.log4j")
     exclude(group = "xml-apis")
+  }
+
+  // Phase G — OpenPDF for the annotation export path. MPL-2.0 (already
+  // on the Licensee allowlist). Pure Java; no native code. The
+  // BouncyCastle + ICU4J + fop transitives are marked `optional` in
+  // OpenPDF's POM so they don't enter our classpath unless we ask
+  // (Phase H pulls bcprov + bcpkix back in for PAdES signing).
+  //
+  // Avoid the `java.awt.Color`-taking overloads — Android doesn't
+  // ship `java.awt.Color` without coreLibraryDesugaring. Direct `/C`
+  // array writes go through `put(PdfName.C, PdfArray(...))` instead.
+  // See `PdfAnnotationExporter.applyColor()` for the pattern.
+  implementation(libs.openpdf) {
+    // Defensive excludes — POM marks these as optional but some
+    // resolvers still pull them. We don't need them for export.
+    exclude(group = "org.bouncycastle")
+    exclude(group = "com.ibm.icu")
+    exclude(group = "org.apache.xmlgraphics")
   }
 }

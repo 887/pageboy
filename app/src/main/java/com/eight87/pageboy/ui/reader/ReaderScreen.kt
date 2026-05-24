@@ -1,5 +1,8 @@
 package com.eight87.pageboy.ui.reader
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,18 +14,27 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.eight87.pageboy.data.annotation.AnnotationSource
 import com.eight87.pageboy.domain.render.RendererReadingPrefs
+import com.eight87.pageboy.domain.render.annotation.AnnotationCommands
+import com.eight87.pageboy.format.pdf.PdfHandle
+import com.eight87.pageboy.format.pdf.export.PdfAnnotationExporter
 import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
 import com.eight87.pageboy.ui.reader.control.ReaderState
 import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
 import com.eight87.pageboy.ui.reader.control.ScrollPersistence
 import com.eight87.pageboy.ui.reader.control.ShareExportCommands
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Phase C.5 — reader screen orchestrator. Holds no business logic; just
@@ -53,6 +65,9 @@ fun ReaderScreen(
   shareExportCommands: ShareExportCommands,
   scrollPersistence: ScrollPersistence,
   readingPrefs: RendererReadingPrefs,
+  annotationCommands: AnnotationCommands? = null,
+  annotationSource: AnnotationSource? = null,
+  pdfAnnotationExporter: PdfAnnotationExporter? = null,
   onBack: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -62,6 +77,40 @@ fun ReaderScreen(
   val findCurrent by findInDocCommands.currentMatchIndex.collectAsStateWithLifecycle()
 
   var findPanelOpen by remember(documentId) { mutableStateOf(false) }
+  val scope = rememberCoroutineScope()
+  val ctx = LocalContext.current
+
+  // Phase G.6 — SAF "save as" launcher for the export-with-annotations
+  // path. Mime type application/pdf so the system picker steers the
+  // user toward a sensible default location + extension.
+  val openHandle = (state as? ReaderState.Open)?.handle
+  val pdfHandle = openHandle as? PdfHandle
+  val canExport = pdfHandle != null &&
+    annotationSource != null &&
+    pdfAnnotationExporter != null
+
+  val exportLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.CreateDocument("application/pdf"),
+  ) { destUri: Uri? ->
+    val pdf = pdfHandle ?: return@rememberLauncherForActivityResult
+    val src = pdf.uri
+    val out = destUri ?: return@rememberLauncherForActivityResult
+    val exporter = pdfAnnotationExporter ?: return@rememberLauncherForActivityResult
+    val annoSource = annotationSource ?: return@rememberLauncherForActivityResult
+    scope.launch {
+      withContext(Dispatchers.IO) {
+        runCatching {
+          val rows = annoSource.list(documentId)
+          val cr = ctx.contentResolver
+          cr.openInputStream(src)?.use { inStream ->
+            cr.openOutputStream(out)?.use { outStream ->
+              exporter.export(inStream, outStream, rows)
+            }
+          }
+        }
+      }
+    }
+  }
 
   // Open the document on first compose for this id. Closing handled by
   // the DisposableEffect below so leaving the screen releases the handle.
@@ -111,6 +160,10 @@ fun ReaderScreen(
           )
         }
       },
+      onExportWithAnnotations = if (canExport) ({
+        val suggested = (pdfHandle?.title ?: "pageboy-export") + "-annotated.pdf"
+        exportLauncher.launch(suggested)
+      }) else null,
     )
     if (findPanelOpen) {
       ReaderFindPanel(
@@ -133,6 +186,8 @@ fun ReaderScreen(
       scrollPersistence = scrollPersistence,
       findCommands = findInDocCommands,
       readingPrefs = readingPrefs,
+      annotationCommands = annotationCommands,
+      annotationSource = annotationSource,
       onRetry = { readerStateProjector.open(documentId) },
       modifier = Modifier.fillMaxSize(),
     )
