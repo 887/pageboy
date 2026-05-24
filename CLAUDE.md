@@ -200,6 +200,25 @@ When working on a phase:
 
 The user follows Paul Graham's *Keep Your Identity Small*. App copy (settings descriptions, error messages, About text, onboarding) should be plain, factual, useful. No "vibes" copy, no personal opinions, no humor that pins identity. This applies double to onboarding and to the signature flow — those are the surfaces the user shows other people.
 
+## Open with… (Phase N) — Android handles per-MIME defaults OS-side
+
+When users want pageboy to be the default app for a MIME type, **Android
+itself handles it** via the long-press → "Open with…" → "Always" /
+"Open by default" flow at the OS level (System Settings → Apps →
+Default apps → Opening links / Open by default per app). Pageboy
+declares its intent filters on `.openwith.OpenWithActivity`
+(`content://` only — locked decision #2 in
+[`docs/plans/open-with.md`](docs/plans/open-with.md)) and the OS does
+the rest.
+
+**Do not** implement an in-app per-MIME default-app picker. Future
+agents who notice that pageboy doesn't have one should leave it that
+way: the OS surface is universal and the per-app duplicate is
+redundant. The only in-app surface is the **Open with** settings
+section (retention slider, save-to-library default, auto-classify
+toggle) — those are pageboy-internal behaviour, not Android default-app
+behaviour.
+
 ## Subagent dispatching
 
 Subagents working on this repo run in worktrees. Each agent prompt must:

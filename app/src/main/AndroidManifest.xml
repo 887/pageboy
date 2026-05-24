@@ -26,131 +26,156 @@
             android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|locale|layoutDirection|density|uiMode">
 
-            <!-- Launcher intent. -->
+            <!-- Launcher intent. Open-with intents land on
+                 .openwith.OpenWithActivity (per Phase N.2) so the
+                 launcher entry stays its single-purpose surface. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <!--
+          Phase N.2 — Open-with entry point.
+
+          - exported=true + intent-filter-only entry: no launcher row,
+            invoked only by the system PackageManager chooser.
+          - Theme is the translucent splash so the user never sees
+            chrome flash between the chooser and the reader.
+          - content:// only (Phase N locked decision #2). file:// URIs
+            are silently ignored — modern Android (>= API 24) deprecated
+            cross-process file:// exposure.
+          - Phase N.1 keeps the eight canonical MIME filters Phase A.6
+            shipped and adds catch-all filters for misbehaving senders
+            (email clients / browsers / messaging apps often emit
+            application/octet-stream; some lazy senders emit
+            application/zip for EPUB / OOXML). The extension pathPattern
+            constrains the catch-all so pageboy doesn't appear in every
+            generic-binary chooser.
+        -->
+        <activity
+            android:name=".openwith.OpenWithActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:label="@string/open_with_activity_label"
+            android:theme="@style/Theme.Pageboy.OpenWith">
+
+            <!-- Markdown (text/markdown, text/x-markdown). -->
+            <intent-filter android:label="@string/open_with_markdown">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="text/markdown" />
+                <data android:mimeType="text/x-markdown" />
+            </intent-filter>
+
+            <!-- PDF. -->
+            <intent-filter android:label="@string/open_with_pdf">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+
+            <!-- EPUB. -->
+            <intent-filter android:label="@string/open_with_epub">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/epub+zip" />
+            </intent-filter>
+
+            <!-- Plain text. -->
+            <intent-filter android:label="@string/open_with_txt">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <!-- DOCX. -->
+            <intent-filter android:label="@string/open_with_docx">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+            </intent-filter>
+
+            <!-- XLSX. -->
+            <intent-filter android:label="@string/open_with_xlsx">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+            </intent-filter>
+
+            <!-- ODT. -->
+            <intent-filter android:label="@string/open_with_odt">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/vnd.oasis.opendocument.text" />
+            </intent-filter>
+
+            <!-- ODS. -->
+            <intent-filter android:label="@string/open_with_ods">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/vnd.oasis.opendocument.spreadsheet" />
+            </intent-filter>
 
             <!--
-              main.md A.6 — deep-link intent filters so pageboy is a
-              first-class "Open with…" target from file managers, email,
-              browsers, and share-sheets. Phase N hooks the reader to
-              these; for Phase A we just declare them so the share-sheet
-              already lists pageboy.
-
-              Each filter declares both content:// and file:// schemes
-              alongside the MIME type — modern Android share intents
-              flow through content://, but some file managers still send
-              file:// URIs.
+              Phase N.1 — catch-all for senders that emit
+              application/octet-stream. Without the path-pattern
+              constraint pageboy would appear in every binary-file
+              chooser; the per-extension <data> elements scope the
+              filter to the formats pageboy actually handles.
             -->
-
-            <!-- Markdown (text/markdown, text/x-markdown) -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="text/markdown" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="text/x-markdown" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-            </intent-filter>
-            <!-- Path-pattern fallback for file managers that hand us a
-                 generic text/plain intent on a .md / .markdown file. -->
-            <intent-filter>
+            <intent-filter android:label="@string/open_with_generic_binary">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" />
-                <data android:scheme="file" />
+                <data android:mimeType="application/octet-stream" />
                 <data android:host="*" />
+                <data android:pathPattern=".*\\.pdf" />
+                <data android:pathPattern=".*\\.epub" />
                 <data android:pathPattern=".*\\.md" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-                <data android:host="*" />
                 <data android:pathPattern=".*\\.markdown" />
+                <data android:pathPattern=".*\\.txt" />
+                <data android:pathPattern=".*\\.docx" />
+                <data android:pathPattern=".*\\.xlsx" />
+                <data android:pathPattern=".*\\.odt" />
+                <data android:pathPattern=".*\\.ods" />
             </intent-filter>
 
-            <!-- PDF -->
-            <intent-filter>
+            <!--
+              Phase N.1 — catch-all for lazy senders that emit
+              application/zip for EPUB / OOXML / ODF files.
+              Same path-pattern constraint pattern.
+            -->
+            <intent-filter android:label="@string/open_with_zip_archive">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="application/pdf" />
                 <data android:scheme="content" />
-                <data android:scheme="file" />
-            </intent-filter>
-
-            <!-- EPUB -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="application/epub+zip" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-            </intent-filter>
-
-            <!-- Plain text -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="text/plain" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-            </intent-filter>
-
-            <!-- DOCX (Microsoft Word OOXML) -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-            </intent-filter>
-
-            <!-- XLSX (Microsoft Excel OOXML) -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-            </intent-filter>
-
-            <!-- ODT (OpenDocument Text) -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="application/vnd.oasis.opendocument.text" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-            </intent-filter>
-
-            <!-- ODS (OpenDocument Spreadsheet) -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="application/vnd.oasis.opendocument.spreadsheet" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
+                <data android:mimeType="application/zip" />
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.epub" />
+                <data android:pathPattern=".*\\.docx" />
+                <data android:pathPattern=".*\\.xlsx" />
+                <data android:pathPattern=".*\\.odt" />
+                <data android:pathPattern=".*\\.ods" />
             </intent-filter>
         </activity>
     </application>

@@ -304,4 +304,11 @@ dependencies {
     exclude(group = "org.apache.logging.log4j")
     exclude(group = "xml-apis")
   }
+
+  // Phase N — WorkManager (work-runtime-ktx) for the daily
+  // OpenWithEphemeralCleanupWorker. Apache-2.0; family allowlist already
+  // permits Apache-2.0. work-testing is JVM-friendly and ships the
+  // synchronous TestListenableWorkerBuilder the worker test uses.
+  implementation(libs.androidx.work.runtime.ktx)
+  testImplementation(libs.androidx.work.testing)
 }

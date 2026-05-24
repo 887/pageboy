@@ -15,13 +15,22 @@ object LibraryFilters {
 
   /**
    * Tab filter — pre-step before format / collection / search / sort.
-   * "All" returns everything; "Started" is `lastReadPositionMs > 0`;
-   * "Recents" is `lastOpenedAt != null` (caller separately sorts +
-   * caps); "Pinned" is `pinned = true`.
+   * "All" returns every scanned-library doc; "Started" is the same
+   * subset with `lastReadPositionMs > 0`; "Recents" is
+   * `lastOpenedAt != null` across both library + ad-hoc rows (caller
+   * separately sorts + caps); "Pinned" is `pinned = true` across both.
+   *
+   * Phase N.5 / locked decision #4 — Started / All hide ad-hoc
+   * `AdHocOpen` rows so the open-with ingest doesn't pollute the
+   * scanned-library tabs. Recents + Pinned surface ad-hoc rows so the
+   * user can find a recently-opened share or re-open a pinned ad-hoc
+   * document.
    */
   fun byTab(docs: List<DocumentEntity>, tab: LibraryTab): List<DocumentEntity> = when (tab) {
-    LibraryTab.All -> docs
-    LibraryTab.Started -> docs.filter { it.lastReadPositionMs > 0L }
+    LibraryTab.All -> docs.filter { it.toSourceKind() is DocumentSourceKind.LibraryRoot }
+    LibraryTab.Started -> docs.filter {
+      it.lastReadPositionMs > 0L && it.toSourceKind() is DocumentSourceKind.LibraryRoot
+    }
     LibraryTab.Recents -> docs.filter { it.lastOpenedAt != null }
     LibraryTab.Pinned -> docs.filter { it.pinned }
   }

@@ -101,4 +101,30 @@ data class DocumentEntity(
    * explicitly removes a root, which is owned by the repository.
    */
   @ColumnInfo(name = "is_missing") val isMissing: Boolean = false,
-)
+
+  /**
+   * Phase N.5 — JSON-encoded [DocumentSourceKind] sealed variant. Null
+   * for rows scanned by Phase B before Phase N landed; the migration
+   * (v2 → v3) leaves the column nullable + treats null as
+   * `LibraryRoot(treeUriString)` for backward-compatible reads
+   * ([toSourceKind] below). New rows ALWAYS write a value: either
+   * `LibraryRoot(rootTreeUriString)` for scanned docs or
+   * `AdHocOpen(uri, ephemeral)` for documents created by
+   * `OpenWithActivity` ingest.
+   *
+   * One TEXT column instead of `kind` + `payload` so future variants
+   * (`SharedAttachment` for an `ACTION_SEND` ingest, etc.) don't need
+   * another schema migration — only the JSON shape changes.
+   */
+  @ColumnInfo(name = "source_json") val sourceJson: String? = null,
+) {
+  /**
+   * Phase N — decode the JSON-encoded source kind for this row. Treats a
+   * null/empty column as the implicit `LibraryRoot(treeUriString)`
+   * fallback so v1/v2 rows continue to read cleanly without a one-shot
+   * backfill.
+   */
+  fun toSourceKind(): DocumentSourceKind =
+    DocumentSourceCodec.decode(sourceJson)
+      ?: DocumentSourceKind.LibraryRoot(rootTreeUriString = treeUriString)
+}

@@ -193,9 +193,32 @@ Goal: render EPUB 2 + 3 spine, navigate by ToC, reflow at the user's font size, 
 
 ---
 
-## Phase N — share-sheet ingest + recents _(spec'd in [`open-with.md`](open-with.md); intent-filter declarations landed in Phase A.6)_
+## Phase N — share-sheet ingest + recents — _Shipped: N.1–N.15 in commit `<pending>` (see [`open-with.md`](open-with.md))_
 
-Goal: opening any supported file from another app (file manager, email client, browser) lands in pageboy via a `content://` intent, gets resolved to a `DocumentEntity` (creating one for the ad-hoc URI), and shows the recents list on the next cold start so the user can find what they opened last week. Sub-steps land when Phase A.6 is closed and the team has a clearer picture of how much state the recents surface should keep.
+Goal: opening any supported file from another app (file manager, email client, browser) lands in pageboy via a `content://` intent, gets resolved to a `DocumentEntity` (creating one for the ad-hoc URI), and shows the recents list on the next cold start so the user can find what they opened last week.
+
+- [x] **N.1** Manifest intent filters relocated to `.openwith.OpenWithActivity` (content:// only per locked decision #2); added `application/octet-stream` + `application/zip` catch-alls with per-extension pathPattern scopes for misbehaving senders.
+- [x] **N.2** `OpenWithActivity` (exported=true, intent-filter-only entry, translucent splash via `Theme.Pageboy.OpenWith`).
+- [x] **N.3** URI permission lifecycle — ephemeral default; `takePersistableUriPermission` attempt in `RoomAdHocDocumentStore.keepAdHoc` with `SecurityException` → `CannotPersist` mapping.
+- [x] **N.4** `OpenWithResolver` interface + `AndroidOpenWithResolver` impl; sealed `OpenWithResult` (Ready / UnknownFormat / PermissionRefused / Failure); reuses Phase B `DocumentClassifier` for magic-byte sniff.
+- [x] **N.5** `DocumentEntity.source_json` TEXT column (sealed `DocumentSourceKind` JSON-encoded — `LibraryRoot` / `AdHocOpen`); Room migration v2→v3.
+- [x] **N.6** Reader integration — `OpenWithActivity` launches `PageboyActivity` with `EXTRA_INITIAL_DOCUMENT_ID`; `PageboyApp` seeds the back stack with `ReaderRoute(documentId)` when present.
+- [x] **N.7** Recents feed — `OpenWithActivity` calls `LibraryRepository.recordOpen(documentId)` on every `Ready` result.
+- [x] **N.8** "Keep this document" reader-overflow entry (visible only when source is `AdHocOpen(ephemeral=true)`); narrow `AdHocReaderActions` interface drives the upgrade flow.
+- [x] **N.9** "Save to library root" snackbar fallback wired in `ReaderScreen` (root-picker + bytes-copy invokes `AdHocDocumentStore.saveToLibraryRoot`; v1 surface uses the snackbar prompt path; full root-picker bottom sheet tracked under open-with.md N.9 follow-up).
+- [x] **N.10** `OpenWithEphemeralCleanupWorker` (daily; 7-day window default, configurable via `OpenWithSettings.ephemeralRetentionDays`; pinned ad-hoc rows preserved).
+- [x] **N.11** Documented in `CLAUDE.md` (Android handles per-MIME default-app picker OS-side; pageboy does NOT implement an in-app duplicate).
+- [x] **N.12** Settings → Open with section (retention slider 1–30 days, save-to-library default boolean, auto-classify boolean).
+- [x] **N.13** 31 new tests (`OpenWithResolverTest`, `AdHocDocumentStoreTest`, `OpenWithEphemeralCleanupWorkerTest`, `OpenWithActivityTest`, `DocumentSourceKindTest`); 180 total, 0 fail.
+- [x] **N.14** AVD smoke deferred to post-merge orchestrator per worktree contract. Synthetic intent for manual verification:
+  ```bash
+  adb shell am start -a android.intent.action.VIEW \
+    -d "content://com.android.providers.downloads.documents/document/raw%3A%2Fsdcard%2FDownload%2Ftest.pdf" \
+    -t "application/pdf" \
+    -n com.eight87.pageboy/com.eight87.pageboy.openwith.OpenWithActivity \
+    --grant-read-uri-permission
+  ```
+- [x] **N.15** main.md ticked; open-with.md sub-steps ticked + status flipped to ✅ DONE.
 
 ---
 

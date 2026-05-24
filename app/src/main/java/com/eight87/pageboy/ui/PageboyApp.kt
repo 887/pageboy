@@ -80,8 +80,18 @@ fun PageboyApp(
   libraryUiSettings: LibraryUiSettings? = null,
   libraryRescanCoordinator: LibraryRescanCoordinator? = null,
   persistedUriPermissionStore: PersistedUriPermissionStore? = null,
+  initialDocumentId: String? = null,
 ) {
-  val backStack = rememberNavBackStack(LibraryRoute)
+  // Phase N.6 — when launched from OpenWithActivity, seed the back stack
+  // with the reader route so the user lands directly in the reader
+  // surface. The library destination stays underneath in the stack so
+  // "back" returns there (not to the open-with caller — that's handled
+  // by OpenWithActivity finishing itself before starting this activity).
+  val backStack = if (initialDocumentId != null) {
+    rememberNavBackStack(LibraryRoute, ReaderRoute(initialDocumentId))
+  } else {
+    rememberNavBackStack(LibraryRoute)
+  }
   val scope = rememberCoroutineScope()
 
   // Resolve the data layer from the running Application if no overrides
@@ -104,6 +114,9 @@ fun PageboyApp(
   val findFactory: (() -> InMemoryFindInDocCommands)? = appGraph?.findInDocCommandsFactory
   val effectiveScrollPersistence: ScrollPersistence? = appGraph?.scrollPersistence
   val effectiveReadingPrefs: RendererReadingPrefs? = appGraph?.rendererReadingPrefs
+  // Phase N.8 — null when AppGraph is unavailable (legacy smoke tests);
+  // ReaderScreen surfaces the Keep affordance only when this is non-null.
+  val effectiveAdHocActions = appGraph?.adHocReaderActions
 
   // Touch the coordinator so the lazy block runs and start() fires.
   LaunchedEffect(effectiveCoordinator) { /* trigger lazy init */ }
@@ -220,6 +233,7 @@ fun PageboyApp(
             onLibraryFolders = { backStack.add(SettingsLibraryFoldersRoute) },
             onRescanNow = { effectiveCoordinator?.requestRescan() },
             readerSettings = appGraph?.readerSettings,
+            openWithSettings = appGraph?.openWithSettings,
           )
         }
         entry<SettingsAboutRoute> {
@@ -256,6 +270,7 @@ fun PageboyApp(
               scrollPersistence = effectiveScrollPersistence,
               readingPrefs = effectiveReadingPrefs,
               onBack = { backStack.removeLastOrNull() },
+              adHocActions = effectiveAdHocActions,
             )
           }
         }

@@ -944,6 +944,22 @@
         }
     },
     {
+        "groupId": "androidx.concurrent",
+        "artifactId": "concurrent-futures-ktx",
+        "version": "1.1.0",
+        "name": "AndroidX Futures Kotlin Extensions",
+        "spdxLicenses": [
+            {
+                "identifier": "Apache-2.0",
+                "name": "Apache License 2.0",
+                "url": "https://www.apache.org/licenses/LICENSE-2.0"
+            }
+        ],
+        "scm": {
+            "url": "http://source.android.com"
+        }
+    },
+    {
         "groupId": "androidx.constraintlayout",
         "artifactId": "constraintlayout",
         "version": "2.0.1",
@@ -1713,6 +1729,22 @@
     },
     {
         "groupId": "androidx.lifecycle",
+        "artifactId": "lifecycle-service",
+        "version": "2.10.0",
+        "name": "Lifecycle Service",
+        "spdxLicenses": [
+            {
+                "identifier": "Apache-2.0",
+                "name": "Apache License 2.0",
+                "url": "https://www.apache.org/licenses/LICENSE-2.0"
+            }
+        ],
+        "scm": {
+            "url": "https://cs.android.com/androidx/platform/frameworks/support"
+        }
+    },
+    {
+        "groupId": "androidx.lifecycle",
         "artifactId": "lifecycle-viewmodel",
         "version": "2.10.0",
         "name": "Lifecycle ViewModel",
@@ -2384,6 +2416,22 @@
         }
     },
     {
+        "groupId": "androidx.tracing",
+        "artifactId": "tracing-ktx",
+        "version": "1.2.0",
+        "name": "Android Tracing Runtime Kotlin Extensions",
+        "spdxLicenses": [
+            {
+                "identifier": "Apache-2.0",
+                "name": "Apache License 2.0",
+                "url": "https://www.apache.org/licenses/LICENSE-2.0"
+            }
+        ],
+        "scm": {
+            "url": "https://cs.android.com/androidx/platform/frameworks/support"
+        }
+    },
+    {
         "groupId": "androidx.transition",
         "artifactId": "transition",
         "version": "1.6.0",
@@ -2516,6 +2564,38 @@
         "artifactId": "window-core-android",
         "version": "1.5.0",
         "name": "WindowManager Core",
+        "spdxLicenses": [
+            {
+                "identifier": "Apache-2.0",
+                "name": "Apache License 2.0",
+                "url": "https://www.apache.org/licenses/LICENSE-2.0"
+            }
+        ],
+        "scm": {
+            "url": "https://cs.android.com/androidx/platform/frameworks/support"
+        }
+    },
+    {
+        "groupId": "androidx.work",
+        "artifactId": "work-runtime",
+        "version": "2.10.0",
+        "name": "WorkManager Runtime",
+        "spdxLicenses": [
+            {
+                "identifier": "Apache-2.0",
+                "name": "Apache License 2.0",
+                "url": "https://www.apache.org/licenses/LICENSE-2.0"
+            }
+        ],
+        "scm": {
+            "url": "https://cs.android.com/androidx/platform/frameworks/support"
+        }
+    },
+    {
+        "groupId": "androidx.work",
+        "artifactId": "work-runtime-ktx",
+        "version": "2.10.0",
+        "name": "WorkManager Kotlin Extensions",
         "spdxLicenses": [
             {
                 "identifier": "Apache-2.0",

@@ -107,4 +107,39 @@ interface DocumentDao {
     """
   )
   suspend fun setScrollPosition(id: String, positionJson: String?, fraction: Float)
+
+  // ---- Phase N — Open with / ad-hoc rows ----
+
+  /**
+   * Phase N.4 — insert a fully-constructed ad-hoc row. The composer that
+   * builds the entity owns the JSON encoding of [DocumentEntity.sourceJson]
+   * (see [com.eight87.pageboy.data.openwith.RoomAdHocDocumentStore]).
+   */
+  @Upsert
+  suspend fun insertOne(document: DocumentEntity)
+
+  /**
+   * Phase N.8 — rewrite the source discriminator JSON for an existing
+   * row. Used when "Keep this document" upgrades an ad-hoc grant to
+   * persistable or replaces it with a library-root copy.
+   */
+  @Query("UPDATE documents SET source_json = :sourceJson WHERE documentId = :id")
+  suspend fun setSourceJson(id: String, sourceJson: String?)
+
+  /**
+   * Phase N.10 — every row whose source carries the `AdHocOpen`
+   * discriminator. The cleanup worker filters in Kotlin by the
+   * `ephemeral` flag + lastOpenedAt cutoff because SQLite's JSON1
+   * extension is not always available across Android API levels.
+   */
+  @Query("SELECT * FROM documents WHERE source_json LIKE '%AdHocOpen%'")
+  suspend fun allAdHocDocuments(): List<DocumentEntity>
+
+  /**
+   * Phase N.10 — hard-delete one row. Only used by the cleanup worker
+   * for stale ephemeral ad-hoc rows; scanned-library rows go through
+   * the soft-delete / `deleteByRoot` paths and never through this.
+   */
+  @Query("DELETE FROM documents WHERE documentId = :id")
+  suspend fun deleteById(id: String)
 }

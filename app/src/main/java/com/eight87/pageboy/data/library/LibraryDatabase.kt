@@ -29,7 +29,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     DocumentEntity::class,
     LibraryFingerprintEntity::class,
   ],
-  version = 2,
+  version = 3,
   exportSchema = true,
 )
 abstract class LibraryDatabase : RoomDatabase() {
@@ -50,6 +50,23 @@ abstract class LibraryDatabase : RoomDatabase() {
     val MIGRATION_1_2: Migration = object : Migration(1, 2) {
       override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE documents ADD COLUMN scroll_position_json TEXT")
+      }
+    }
+
+    /**
+     * Phase N.5 — v2 → v3 migration. Adds the JSON-encoded
+     * [DocumentSourceKind] column (`source_json`). Existing rows leave
+     * the column NULL; [DocumentEntity.toSourceKind] treats null as
+     * `LibraryRoot(treeUriString)` so the pre-Phase-N library rows
+     * continue to surface in the All / Recents tabs without a one-shot
+     * backfill.
+     *
+     * Ad-hoc documents created from Phase N forward write the column
+     * explicitly (an `AdHocOpen(uri, ephemeral)` JSON blob).
+     */
+    val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+      override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE documents ADD COLUMN source_json TEXT")
       }
     }
   }

@@ -83,6 +83,12 @@ class LibraryRepository(
           scrollPositionJson = existing?.scrollPositionJson,
           pinned = existing?.pinned ?: false,
           isMissing = false,
+          // Phase N.5 — every scanner-emitted row gets the LibraryRoot
+          // discriminator. Ad-hoc opens go through AdHocDocumentStore +
+          // never via this path.
+          sourceJson = DocumentSourceCodec.encode(
+            DocumentSourceKind.LibraryRoot(rootTreeUriString = scanned.treeUriString),
+          ),
         )
       }
       if (entities.isNotEmpty()) documentDao.upsertAll(entities)

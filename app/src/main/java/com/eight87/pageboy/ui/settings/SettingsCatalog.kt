@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.eight87.pageboy.R
 import com.eight87.pageboy.ui.settings.sections.LibraryEntries
+import com.eight87.pageboy.ui.settings.sections.OpenWithEntries
 import com.eight87.pageboy.ui.settings.sections.ReaderEntries
 import com.eight87.pageboy.ui.settings.sections.RootEntries
 
@@ -15,7 +16,7 @@ import com.eight87.pageboy.ui.settings.sections.RootEntries
  * placeholder; real per-feature sections — Appearance, Library, Reader,
  * Annotations, Signing — land alongside the surfaces they configure.)
  */
-enum class Section { Root, Appearance, Library, Reader, Annotations, Signing }
+enum class Section { Root, Appearance, Library, Reader, OpenWith, Annotations, Signing }
 
 /**
  * Grouping bucket inside a section. All entries with the same
@@ -87,7 +88,8 @@ object SettingsCatalog {
   const val ID_ABOUT = "about"
 
   /** Flat aggregation across the per-section files. */
-  val entries: List<SettingsCatalogEntry> = RootEntries + LibraryEntries + ReaderEntries
+  val entries: List<SettingsCatalogEntry> =
+    RootEntries + LibraryEntries + ReaderEntries + OpenWithEntries
 
   /** Look up an entry by id. Throws if missing — IDs are compile-time
    *  stable. */

@@ -143,4 +143,38 @@
     <string name="settings_about_easter_egg_second">Tap 1 more time…</string>
     <string name="settings_about_easter_egg_ferret_cd">pageboy ferret mascot in a hoodie, sitting in a reading nook</string>
     <string name="settings_about_easter_egg_dismiss_cd">Dismiss easter egg</string>
+
+    <!-- Phase N — Open with…  -->
+    <string name="open_with_activity_label">Open with pageboy</string>
+    <string name="open_with_markdown">Open Markdown with pageboy</string>
+    <string name="open_with_pdf">Open PDF with pageboy</string>
+    <string name="open_with_epub">Open EPUB with pageboy</string>
+    <string name="open_with_txt">Open text with pageboy</string>
+    <string name="open_with_docx">Open Word document with pageboy</string>
+    <string name="open_with_xlsx">Open Excel workbook with pageboy</string>
+    <string name="open_with_odt">Open OpenDocument text with pageboy</string>
+    <string name="open_with_ods">Open OpenDocument spreadsheet with pageboy</string>
+    <string name="open_with_generic_binary">Open document with pageboy</string>
+    <string name="open_with_zip_archive">Open archive with pageboy</string>
+
+    <string name="open_with_unknown_format">Pageboy does not recognize \"%1$s\" as a supported document.</string>
+    <string name="open_with_permission_refused">Pageboy could not read the document. The source app may have revoked access.</string>
+    <string name="open_with_failure">Pageboy could not open the document.</string>
+
+    <!-- Phase N.8 — Reader-overflow Keep entry. -->
+    <string name="reader_keep_document_label">Keep this document</string>
+    <string name="reader_keep_document_kept">Document kept in pageboy.</string>
+    <string name="reader_keep_document_cannot_persist">The sender did not grant lasting access. Save a copy to a folder pageboy already scans to keep this document.</string>
+    <string name="reader_keep_save_to_library">Save to library root…</string>
+    <string name="reader_keep_dialog_dismiss">Not now</string>
+    <string name="reader_keep_no_roots">Add a source folder in Settings → Library, then try Keep again.</string>
+
+    <!-- Phase N.12 — Settings → Open with section. -->
+    <string name="settings_group_open_with">Open with</string>
+    <string name="settings_open_with_retention_label">Ephemeral retention</string>
+    <string name="settings_open_with_retention_subtitle">Days to keep ad-hoc opens before cleanup (currently %1$d).</string>
+    <string name="settings_open_with_save_default_label">Save ad-hoc opens to library by default</string>
+    <string name="settings_open_with_save_default_subtitle">Skip the Keep prompt and copy ad-hoc documents into a library root automatically.</string>
+    <string name="settings_open_with_auto_classify_label">Auto-classify unknown MIME types</string>
+    <string name="settings_open_with_auto_classify_subtitle">Sniff bytes when the sender mis-declares the file type.</string>
 </resources>

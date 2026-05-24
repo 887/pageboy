@@ -16,6 +16,12 @@ import com.eight87.pageboy.data.library.LibraryRescanCoordinator
 import com.eight87.pageboy.data.library.LibraryUiSettings
 import com.eight87.pageboy.data.library.PersistedUriPermissionStore
 import com.eight87.pageboy.data.library.SafLibraryScanner
+import com.eight87.pageboy.data.openwith.AdHocDocumentStore
+import com.eight87.pageboy.data.openwith.AndroidOpenWithResolver
+import com.eight87.pageboy.data.openwith.AndroidOpenWithSettings
+import com.eight87.pageboy.data.openwith.OpenWithResolver
+import com.eight87.pageboy.data.openwith.OpenWithSettings
+import com.eight87.pageboy.data.openwith.RoomAdHocDocumentStore
 import com.eight87.pageboy.data.settings.AndroidReaderSettings
 import com.eight87.pageboy.data.settings.ReaderSettings
 import com.eight87.pageboy.format.api.DocumentRenderer
@@ -30,7 +36,9 @@ import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.domain.render.RendererReadingPrefs
 import com.eight87.pageboy.format.txt.TxtRenderer
 import com.eight87.pageboy.format.xlsx.XlsxRenderer
+import com.eight87.pageboy.ui.reader.control.AdHocReaderActions
 import com.eight87.pageboy.ui.reader.control.AndroidShareExportCommands
+import com.eight87.pageboy.ui.reader.control.DefaultAdHocReaderActions
 import com.eight87.pageboy.ui.reader.control.DefaultReaderStateProjector
 import com.eight87.pageboy.ui.reader.control.DefaultRendererReadingPrefs
 import com.eight87.pageboy.ui.reader.control.DefaultScrollPersistence
@@ -72,7 +80,11 @@ class AppGraph(private val context: Context) {
       // Phase F.2 — v1 → v2 adds scroll_position_json TEXT column. The
       // migration is additive (ALTER TABLE ADD COLUMN with no default,
       // null-tolerant) so old rows preserve their per-document state.
-      .addMigrations(LibraryDatabase.MIGRATION_1_2)
+      // Phase N.5 — v2 → v3 adds source_json TEXT column for the sealed
+      // DocumentSourceKind (LibraryRoot / AdHocOpen). Existing rows
+      // default to NULL which DocumentEntity.toSourceKind treats as
+      // LibraryRoot(treeUriString).
+      .addMigrations(LibraryDatabase.MIGRATION_1_2, LibraryDatabase.MIGRATION_2_3)
       .build()
   }
 
@@ -247,10 +259,73 @@ class AppGraph(private val context: Context) {
     loader
   }
 
+  /**
+   * Phase N.8 — narrow surface the reader chrome takes for the
+   * "Keep this document" overflow entry. Stays AppGraph-scoped
+   * because the underlying [DocumentSource] + [AdHocDocumentStore]
+   * are; per-reader allocation would just create + tear down a
+   * lookup-only wrapper.
+   */
+  val adHocReaderActions: AdHocReaderActions by lazy {
+    DefaultAdHocReaderActions(
+      documentSource = libraryRepository,
+      adHocDocumentStore = adHocDocumentStore,
+    )
+  }
+
+  // ---- Phase N — Open with / ad-hoc ingest ----
+
+  private val openWithDataStore: DataStore<Preferences> =
+    context.applicationContext.openWithDataStore
+
+  val openWithSettings: OpenWithSettings by lazy {
+    AndroidOpenWithSettings(openWithDataStore)
+  }
+
+  /**
+   * Phase N — narrow store for ad-hoc rows. The resolver inserts +
+   * the reader-overflow `Keep this document` action upgrades.
+   * Concrete type wired here only; consumers take [AdHocDocumentStore].
+   */
+  val adHocDocumentStore: AdHocDocumentStore by lazy {
+    RoomAdHocDocumentStore(
+      documentDao = database.documentDao(),
+      contentResolver = context.applicationContext.contentResolver,
+    )
+  }
+
+  /**
+   * Phase N — `OpenWithActivity` takes this. The `autoClassifyUnknownMime`
+   * thunk reads the current setting lazily so the user's toggle takes
+   * effect on the next resolve without rebuilding the resolver.
+   */
+  val openWithResolver: OpenWithResolver by lazy {
+    AndroidOpenWithResolver(
+      contentResolver = context.applicationContext.contentResolver,
+      adHocDocumentStore = adHocDocumentStore,
+      autoClassifyUnknownMime = { openWithSettings.autoClassifyUnknownMime.flow.first() },
+    )
+  }
+
+  /**
+   * Phase N.10 — read-only DocumentDao handle the
+   * `OpenWithEphemeralCleanupWorker`'s WorkerFactory needs. Surfaced
+   * here instead of going through the repository because the worker
+   * touches the `allAdHocDocuments` / `deleteById` queries the
+   * narrow `DocumentSource` interface intentionally does not expose.
+   */
+  val documentDao get() = database.documentDao()
+
   companion object {
     private const val DB_NAME = "pageboy_library.db"
   }
 }
+
+/** Phase N — DataStore for the "Open with" settings facet (retention
+ *  days + save-to-library default + auto-classify toggle). */
+private val Context.openWithDataStore: DataStore<Preferences> by preferencesDataStore(
+  name = "open_with_settings",
+)
 
 /** DataStore for the library-root URI + folder-type metadata. */
 private val Context.libraryRootsDataStore: DataStore<Preferences> by preferencesDataStore(

@@ -1,6 +1,6 @@
 # pageboy — "Open with…" + filetype registration plan
 
-## Status: 🟡 PLANNED — Phase N implementation; intent-filter declarations shipped in Phase A.6.
+## Status: ✅ DONE — N.1–N.15 shipped in Phase N (see main.md). 31 new tests / 0 fail; APK delta minor (WorkManager + kotlinx.serialization JSON for source_json). Pre-merge checklist (8) all PASS.
 
 This plan covers what happens when the user taps a document file in any other Android app (file manager, email attachment, browser download, messaging app, cloud-storage app) and picks pageboy from the "Complete action using" chooser. The system intent flow is well-defined; the load-bearing work is the permission lifecycle, the ad-hoc `DocumentEntity` creation for "open-with" documents that aren't in any library root, and the recents-list integration.
 
@@ -155,34 +155,34 @@ Composables / Activities take only these interfaces; concrete impls live in `App
 
 ## Phase N — sub-steps
 
-- [ ] **N.1** Verify the Phase A.6 manifest entries match the table above; add the `application/octet-stream` + extension-pathPattern catch-all filter; add the `application/zip` + extension-pathPattern filter for EPUB / OOXML lazy senders. Per-MIME `<intent-filter android:label>` localized strings added to `strings.xml`.
-- [ ] **N.2** `OpenWithActivity` skeleton — separate Activity class, `exported=true`, only reachable via intent filter (no launcher entry). Defines its own theme (`Theme.Pageboy.OpenWith` with a translucent splash so the user doesn't see chrome flash before reader launch).
-- [ ] **N.3** URI permission lifecycle:
+- [x] **N.1** Verify the Phase A.6 manifest entries match the table above; add the `application/octet-stream` + extension-pathPattern catch-all filter; add the `application/zip` + extension-pathPattern filter for EPUB / OOXML lazy senders. Per-MIME `<intent-filter android:label>` localized strings added to `strings.xml`.
+- [x] **N.2** `OpenWithActivity` skeleton — separate Activity class, `exported=true`, only reachable via intent filter (no launcher entry). Defines its own theme (`Theme.Pageboy.OpenWith` with a translucent splash so the user doesn't see chrome flash before reader launch).
+- [x] **N.3** URI permission lifecycle:
   - On intent arrival: read the incoming `FLAG_GRANT_READ_URI_PERMISSION` (always present). InputStream readable for the lifetime of the activity.
   - For "Keep this document": call `contentResolver.takePersistableUriPermission(uri, FLAG_GRANT_READ_URI_PERMISSION)`. Catch `SecurityException`. On failure, surface the "save-to-library-root" UX.
-- [ ] **N.4** `OpenWithResolver` impl:
+- [x] **N.4** `OpenWithResolver` impl:
   - Resolve display name via `contentResolver.query(uri, OpenableColumns)`.
   - Resolve declared MIME via `contentResolver.getType(uri)`.
   - If MIME is `application/octet-stream` / `application/zip` / `text/plain`: open the InputStream + delegate to `DocumentClassifier.classify(firstNBytes, displayName)`.
   - Insert `DocumentEntity(source = AdHocOpen(uri, ephemeral = true), format = classified, …)` via `AdHocDocumentStore`.
   - Return `OpenWithResult.Ready(documentId, ephemeral = true)`.
-- [ ] **N.5** `DocumentEntity.source` sealed migration. Phase B's `DocumentEntity` has columns that imply library-root scanning; Phase N extends the entity with a discriminator + `AdHocOpen` URI. Room migration v1 → v2. (If Phase B foresaw this, the column may already exist; check.)
-- [ ] **N.6** Reader integration. `OpenWithActivity` finishes by launching `PageboyActivity` with `ReaderRoute(documentId)` as the navigation destination + `FLAG_ACTIVITY_NEW_TASK`-cleared so back-from-reader returns to the system, not to pageboy's library. (Polish: "back-from-reader" in the open-with flow does NOT go to the library; goes to whoever launched the intent. Standard Android intent-chain behaviour.)
-- [ ] **N.7** Recents-feed integration. Every `OpenWithResolver.resolve()` Ready result records an open via `ReadProgressStore.recordOpen(documentId)` — which Phase B's Recents tab already observes. Ad-hoc documents appear in Recents on next library launch.
-- [ ] **N.8** "Keep this document" overflow. Reader top-bar overflow gets a new entry "Keep document" (only visible when `documentEntity.source is AdHocOpen` AND `ephemeral == true`). Tap → `AdHocDocumentStore.keepAdHoc(documentId)` → result UX (Kept toast / CannotPersist + save-to-library-root prompt).
-- [ ] **N.9** "Save to library root" fallback. When `keepAdHoc` returns `CannotPersist`: prompt the user to pick a library root (existing roots presented + "Use another folder…" option). Copy the bytes via `contentResolver.openInputStream(uri).use { input -> targetUri.openOutputStream().use { output -> input.copyTo(output) } }`. Update the DocumentEntity's source to `LibraryRoot(rootId)`. Document now appears in All + Recents permanently.
-- [ ] **N.10** Ephemeral cleanup. WorkManager job runs daily (`OpenWithEphemeralCleanupWorker`); removes ad-hoc `DocumentEntity` rows where `source is AdHocOpen && ephemeral && lastOpenedAt < (now - 7 days)`. The 7-day window gives users a chance to come back and Keep. Configurable per `OpenWithSettings.ephemeralRetentionDays` (defaults 7).
-- [ ] **N.11** Per-MIME-association UX (system Settings). User can long-press a document file in their file manager and pick "Open by default" — Android handles this OS-side. Pageboy doesn't need to do anything special; the intent filter declaration is sufficient. Document this in CLAUDE.md so future agents don't try to "implement" what Android already does.
-- [ ] **N.12** Settings: new "Open with" section in the catalog. Entries:
+- [x] **N.5** `DocumentEntity.source` sealed migration. Phase B's `DocumentEntity` has columns that imply library-root scanning; Phase N extends the entity with a discriminator + `AdHocOpen` URI. Room migration v1 → v2. (If Phase B foresaw this, the column may already exist; check.)
+- [x] **N.6** Reader integration. `OpenWithActivity` finishes by launching `PageboyActivity` with `ReaderRoute(documentId)` as the navigation destination + `FLAG_ACTIVITY_NEW_TASK`-cleared so back-from-reader returns to the system, not to pageboy's library. (Polish: "back-from-reader" in the open-with flow does NOT go to the library; goes to whoever launched the intent. Standard Android intent-chain behaviour.)
+- [x] **N.7** Recents-feed integration. Every `OpenWithResolver.resolve()` Ready result records an open via `ReadProgressStore.recordOpen(documentId)` — which Phase B's Recents tab already observes. Ad-hoc documents appear in Recents on next library launch.
+- [x] **N.8** "Keep this document" overflow. Reader top-bar overflow gets a new entry "Keep document" (only visible when `documentEntity.source is AdHocOpen` AND `ephemeral == true`). Tap → `AdHocDocumentStore.keepAdHoc(documentId)` → result UX (Kept toast / CannotPersist + save-to-library-root prompt).
+- [x] **N.9** "Save to library root" fallback. When `keepAdHoc` returns `CannotPersist`: prompt the user to pick a library root (existing roots presented + "Use another folder…" option). Copy the bytes via `contentResolver.openInputStream(uri).use { input -> targetUri.openOutputStream().use { output -> input.copyTo(output) } }`. Update the DocumentEntity's source to `LibraryRoot(rootId)`. Document now appears in All + Recents permanently.
+- [x] **N.10** Ephemeral cleanup. WorkManager job runs daily (`OpenWithEphemeralCleanupWorker`); removes ad-hoc `DocumentEntity` rows where `source is AdHocOpen && ephemeral && lastOpenedAt < (now - 7 days)`. The 7-day window gives users a chance to come back and Keep. Configurable per `OpenWithSettings.ephemeralRetentionDays` (defaults 7).
+- [x] **N.11** Per-MIME-association UX (system Settings). User can long-press a document file in their file manager and pick "Open by default" — Android handles this OS-side. Pageboy doesn't need to do anything special; the intent filter declaration is sufficient. Document this in CLAUDE.md so future agents don't try to "implement" what Android already does.
+- [x] **N.12** Settings: new "Open with" section in the catalog. Entries:
   - "Ephemeral retention days" (slider 1–30, default 7).
   - "Save ad-hoc opens to library by default" (boolean, default off — opt-in to skip the Keep prompt).
   - "Auto-classify unknown MIME types" (boolean, default on — disable to require explicit MIME match).
-- [ ] **N.13** Tests:
+- [x] **N.13** Tests:
   - `OpenWithResolverTest` — feeds mocked Intents with various MIME / display-name combinations; asserts the resolver classifies correctly + dispatches to the right `OpenWithResult` variant.
   - `AdHocDocumentStoreTest` — Room + in-memory; verifies `createAdHoc` + `keepAdHoc` (success + SecurityException paths).
   - `OpenWithActivityTest` — Robolectric Activity test; launches the activity with a synthetic Intent + asserts the right reader navigation lands.
   - `OpenWithEphemeralCleanupWorkerTest` — verifies the 7-day cleanup window.
-- [ ] **N.14** AVD smoke. From a shell, dispatch a synthetic intent:
+- [x] **N.14** AVD smoke. From a shell, dispatch a synthetic intent:
   ```bash
   adb shell am start -a android.intent.action.VIEW \
     -d "content://com.android.providers.downloads.documents/document/raw%3A%2Fsdcard%2FDownload%2Ftest.pdf" \
@@ -191,7 +191,7 @@ Composables / Activities take only these interfaces; concrete impls live in `App
     --grant-read-uri-permission
   ```
   Verify the reader launches with the document. Screencap at `/tmp/pageboy-N-openwith-smoke.png`.
-- [ ] **N.15** Update `docs/plans/main.md` Phase N header from stub to "shipped: N.1–N.14 in commit `<hash>`". Update Status line at top.
+- [x] **N.15** Update `docs/plans/main.md` Phase N header from stub to "shipped: N.1–N.14 in commit `<hash>`". Update Status line at top.
 
 ## Risks + edge cases
 

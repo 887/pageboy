@@ -50,6 +50,8 @@ internal fun ReaderTopBar(
   onBack: () -> Unit,
   onToggleFind: () -> Unit,
   onShare: () -> Unit,
+  showKeepDocument: Boolean = false,
+  onKeepDocument: () -> Unit = {},
 ) {
   var overflowOpen by remember { mutableStateOf(false) }
   TopAppBar(
@@ -114,13 +116,28 @@ internal fun ReaderTopBar(
         expanded = overflowOpen,
         onDismissRequest = { overflowOpen = false },
       ) {
-        // Phase C ships the menu with a single "no actions yet" entry.
-        // Phase G+ adds annotation / bookmark / signature entries here.
-        DropdownMenuItem(
-          text = { Text(stringResource(R.string.reader_overflow_empty_label)) },
-          onClick = { overflowOpen = false },
-          enabled = false,
-        )
+        if (showKeepDocument) {
+          // Phase N.8 — "Keep this document" appears only when the
+          // current document's source is AdHocOpen + ephemeral. Tap
+          // calls into AdHocReaderActions.keepAdHoc; the chrome shows
+          // a toast / dialog based on the sealed KeepResult.
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.reader_keep_document_label)) },
+            onClick = {
+              overflowOpen = false
+              onKeepDocument()
+            },
+            modifier = Modifier.semantics { testTag = "reader_keep_document_menu" },
+          )
+        } else {
+          // Phase C ships the menu with a single "no actions yet" entry.
+          // Phase G+ adds annotation / bookmark / signature entries here.
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.reader_overflow_empty_label)) },
+            onClick = { overflowOpen = false },
+            enabled = false,
+          )
+        }
       }
     },
   )
