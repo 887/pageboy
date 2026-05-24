@@ -19,6 +19,8 @@ import com.eight87.pageboy.data.library.SafLibraryScanner
 import com.eight87.pageboy.data.settings.AndroidReaderSettings
 import com.eight87.pageboy.data.settings.ReaderSettings
 import com.eight87.pageboy.format.api.DocumentRenderer
+import com.eight87.pageboy.format.markdown.MarkdownParser
+import com.eight87.pageboy.format.markdown.MarkdownRenderer
 import com.eight87.pageboy.format.registry.CompiledFormatRegistry
 import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.ui.reader.control.AndroidShareExportCommands
@@ -111,17 +113,29 @@ class AppGraph(private val context: Context) {
   }
 
   /**
-   * Phase C.2 / C.7 — format registry. Phase C ships an empty map; the
-   * [CompiledFormatRegistry]'s fallback to
-   * [com.eight87.pageboy.format.placeholder.PlaceholderRenderer] covers
-   * every [DocumentFormat] until its renderer ships in Phase D–M.
+   * Phase D — Markdown is the first real [DocumentRenderer]. One commonmark
+   * parser instance is fine to share across renders; it's stateless and
+   * thread-safe (the `Parser` holds only the extension list).
+   */
+  private val markdownParser: MarkdownParser by lazy { MarkdownParser() }
+
+  /**
+   * Phase C.2 / C.7 / D.5 — format registry. Phase D adds the
+   * [MarkdownRenderer] entry; every other [DocumentFormat] continues to
+   * fall through to the [com.eight87.pageboy.format.placeholder.PlaceholderRenderer]
+   * via [CompiledFormatRegistry]'s fallback, which is what keeps the
+   * reader UI exercisable end-to-end before Phase E–M land their
+   * renderers.
    *
-   * Per-format renderers register themselves here as their phase lands.
    * Adding a format: one new entry. Never a `when (format)` switch in
    * the reader (R.X.9).
    */
   val formatRegistry: FormatRegistry by lazy {
-    CompiledFormatRegistry(renderers = emptyMap<DocumentFormat, DocumentRenderer>())
+    CompiledFormatRegistry(
+      renderers = mapOf<DocumentFormat, DocumentRenderer>(
+        DocumentFormat.Markdown to MarkdownRenderer(markdownParser),
+      ),
+    )
   }
 
   val readerStateProjector: ReaderStateProjector by lazy {

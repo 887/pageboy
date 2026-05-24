@@ -208,4 +208,18 @@ dependencies {
   // Phase B — DocumentFile wrapper around SAF tree URIs; backing API for
   // the scanner's tree walker.
   implementation(libs.androidx.documentfile)
+
+  // Phase D — commonmark-java parser + six GFM extensions for the Markdown
+  // renderer. All BSD-2-Clause; on the family Licensee allowlist. Renderer
+  // is hand-rolled Compose on top of the AST (see format/markdown/). The
+  // yaml-front-matter extension is excluded — a 40-LOC sniffer strips the
+  // `--- … ---` header before the body reaches commonmark, which keeps
+  // snakeyaml-engine out of the APK (~150 KB saved).
+  implementation(libs.commonmark.core)
+  implementation(libs.commonmark.ext.gfm.tables)
+  implementation(libs.commonmark.ext.gfm.strikethrough)
+  implementation(libs.commonmark.ext.task.list.items)
+  implementation(libs.commonmark.ext.autolink)
+  implementation(libs.commonmark.ext.footnotes)
+  implementation(libs.commonmark.ext.image.attributes)
 }

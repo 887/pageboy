@@ -1,6 +1,6 @@
 # pageboy — main build plan
 
-## Status: 🟢 Phase C shipped; Phase D next
+## Status: 🟢 Phase D shipped; Phase E next
 
 _Phase 0 verified, Phase A shipped (buildable Compose APK with family chrome — vertical nav rail, top bar, settings catalog DSL, AboutScreen, LicensesScreen, Licensee inventory). Phase B shipped (multi-root SAF document library — Room schema, four folder modes, magic-byte + extension classifier covering all 8 formats, scanner + rescan coordinator + repository, LibraryScreen with four whisperboy-style tabs + filters + search + sort, folders management screen, scan progress banner, Library settings section). Phases C+ are **stub headers** awaiting per-format research (see [`format-research.md`](format-research.md)) — each one names the format-research plan it depends on, and the research agent who owns that plan is expected to fill in the sub-step checkboxes for the corresponding phase before any implementation lands._
 
@@ -108,9 +108,24 @@ Goal: the screen the user lands on when they tap a document. Top bar (back, titl
 
 ---
 
-## Phase D — Markdown renderer _(stub — depends on `docs/plans/format-markdown.md`)_
+## Phase D — Markdown renderer — _Shipped: D.1–D.14 in commit `<pending>`_
 
-Goal: render Markdown with syntax-highlighted code blocks, GFM tables, task lists, footnotes. The research plan picks the parser + the Compose-side highlighter. Sub-steps land then.
+Goal: first real `DocumentRenderer` impl. `commonmark-java` 0.28.0 (BSD-2-Clause) + 6 GFM extensions; hand-rolled Compose `AnnotatedString` renderer (Markwon is dead — last release 2023-02 — not used). Code-block syntax highlighting deferred to v1.1; math out of scope; image rendering = placeholder card (Coil deferred to Phase F).
+
+- [x] **D.1** Pin `org.commonmark:commonmark` 0.28.0 + 6 extensions (gfm-tables, gfm-strikethrough, task-list-items, autolink, footnotes, image-attributes) in `gradle/libs.versions.toml`; reference from `app/build.gradle.kts`. YAML-frontmatter extension excluded — DIY sniffer (saves snakeyaml transitive). Licensee allowlist already permits BSD-2-Clause (Phase A).
+- [x] **D.2** `format/markdown/` package — `MarkdownRenderer` (DocumentRenderer impl), `MarkdownHandle` (DocumentHandle subtype carrying AST + title + rawText + frontmatter), `MarkdownParser` (commonmark wrapper, single SRP), `MarkdownStyle` (M3 typography tokens per element), `MarkdownTitleExtractor` (first H1 plain text).
+- [x] **D.3** Hand-rolled Compose `AnnotatedString` renderer — block-by-block walk into a `LazyColumn`; each block converts inline children into one `AnnotatedString`. Block types in v1: heading H1–H6, paragraph, blockquote (recursive), ordered + bullet list (recursive), task list item (Material checkbox, read-only), fenced + indented code block (monospace, no highlighting), inline code, HTML block / HTML inline (raw monospace fallback per G3), thematic break (`Divider`), image (placeholder card with alt + URL), link (clickable, opens via `Intent.ACTION_VIEW`), table (GFM), strikethrough, footnote ref + definition.
+- [x] **D.4** Body Composable split: `MarkdownBody.kt` (orchestrator + `LazyColumn` dispatch), `MarkdownBlocks.kt` (per-block renderers), `MarkdownInlines.kt` (inline → `AnnotatedString`). Each file under 400 LOC.
+- [x] **D.5** `AppGraph` wires `MarkdownRenderer` into `CompiledFormatRegistry`. Other formats still fall through to `PlaceholderRenderer`.
+- [x] **D.6** `MarkdownRenderer.extractTitle()` returns first H1 plain text (or null). Scanner integration deferred (Phase B scanner uses filename-derived title; hook is in place for a later phase to consume).
+- [x] **D.7** Per-format scroll position: `MarkdownBody` hosts a `LazyListState` whose `firstVisibleItemIndex` + `firstVisibleItemScrollOffset` are observed and recorded via `ScrollPersistence.recordPosition()`. On open the saved position is restored. The existing `ScrollPosition(pageIndex, offsetFraction)` data class is used directly — `pageIndex` carries the item index, `offsetFraction` carries the pixel offset normalised against an item-height heuristic. Sealed refactor deferred (the current encoding handles both reflowable + paginated cases through the existing Phase C `lastReadPositionMs` long).
+- [x] **D.8** Find-in-document: case-insensitive substring search across the raw markdown text. Matches indexed by line; scroll jumps to the `LazyColumn` item nearest the match. Highlight rendering deferred to v1.1.
+- [x] **D.9** `ReaderSettings.continuousScrolling` honoured advisory-only — Markdown ships continuous only; paginated mode deferred per R.F (TODO comment in `MarkdownBody`).
+- [x] **D.10** Image rendering — placeholder card showing alt text + URL; tap opens URL via `Intent.ACTION_VIEW`. Coil deferred to Phase F (PDF page rasters earn the dependency).
+- [x] **D.11** Tests: `MarkdownParserTest` (parse + GFM extensions + title extraction), `MarkdownInlinesTest` (inline → AnnotatedString span mapping), `MarkdownBlocksTest` (block dispatch helpers), `MarkdownRendererTest` (DocumentRenderer contract), `MarkdownFrontMatterTest` (DIY YAML sniffer), `MarkdownBodySmokeTest` (Robolectric Compose smoke), `MarkdownFindTest` (find-in-doc match enumeration).
+- [x] **D.12** `:app:assembleDebug` + `:app:testDebugUnitTest` both green. Pre-merge checklist (8 items) all PASS.
+- [x] **D.13** Smoke on `emulator-5554`: pushed `pageboy-test.md` covering every block type to `/sdcard/Documents/pageboy-test/`, added as library root via SAF, tapped → `MarkdownRenderer.Body()` renders. Screencaps at `/tmp/pageboy-D-markdown-render.png` + `/tmp/pageboy-D-find.png`.
+- [x] **D.14** This main.md updated; refactor-solid.md Phase D audit appended.
 
 ---
 

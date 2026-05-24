@@ -2208,6 +2208,118 @@
         }
     },
     {
+        "groupId": "org.commonmark",
+        "artifactId": "commonmark",
+        "version": "0.28.0",
+        "name": "commonmark-java core",
+        "spdxLicenses": [
+            {
+                "identifier": "BSD-2-Clause",
+                "name": "BSD 2-Clause \"Simplified\" License",
+                "url": "https://opensource.org/licenses/BSD-2-Clause"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/commonmark/commonmark-java"
+        }
+    },
+    {
+        "groupId": "org.commonmark",
+        "artifactId": "commonmark-ext-autolink",
+        "version": "0.28.0",
+        "name": "commonmark-java extension for autolinking",
+        "spdxLicenses": [
+            {
+                "identifier": "BSD-2-Clause",
+                "name": "BSD 2-Clause \"Simplified\" License",
+                "url": "https://opensource.org/licenses/BSD-2-Clause"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/commonmark/commonmark-java"
+        }
+    },
+    {
+        "groupId": "org.commonmark",
+        "artifactId": "commonmark-ext-footnotes",
+        "version": "0.28.0",
+        "name": "commonmark-java extension for footnotes",
+        "spdxLicenses": [
+            {
+                "identifier": "BSD-2-Clause",
+                "name": "BSD 2-Clause \"Simplified\" License",
+                "url": "https://opensource.org/licenses/BSD-2-Clause"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/commonmark/commonmark-java"
+        }
+    },
+    {
+        "groupId": "org.commonmark",
+        "artifactId": "commonmark-ext-gfm-strikethrough",
+        "version": "0.28.0",
+        "name": "commonmark-java extension for strikethrough",
+        "spdxLicenses": [
+            {
+                "identifier": "BSD-2-Clause",
+                "name": "BSD 2-Clause \"Simplified\" License",
+                "url": "https://opensource.org/licenses/BSD-2-Clause"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/commonmark/commonmark-java"
+        }
+    },
+    {
+        "groupId": "org.commonmark",
+        "artifactId": "commonmark-ext-gfm-tables",
+        "version": "0.28.0",
+        "name": "commonmark-java extension for tables",
+        "spdxLicenses": [
+            {
+                "identifier": "BSD-2-Clause",
+                "name": "BSD 2-Clause \"Simplified\" License",
+                "url": "https://opensource.org/licenses/BSD-2-Clause"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/commonmark/commonmark-java"
+        }
+    },
+    {
+        "groupId": "org.commonmark",
+        "artifactId": "commonmark-ext-image-attributes",
+        "version": "0.28.0",
+        "name": "commonmark-java extension for image attributes",
+        "spdxLicenses": [
+            {
+                "identifier": "BSD-2-Clause",
+                "name": "BSD 2-Clause \"Simplified\" License",
+                "url": "https://opensource.org/licenses/BSD-2-Clause"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/commonmark/commonmark-java"
+        }
+    },
+    {
+        "groupId": "org.commonmark",
+        "artifactId": "commonmark-ext-task-list-items",
+        "version": "0.28.0",
+        "name": "commonmark-java extension for task list items",
+        "spdxLicenses": [
+            {
+                "identifier": "BSD-2-Clause",
+                "name": "BSD 2-Clause \"Simplified\" License",
+                "url": "https://opensource.org/licenses/BSD-2-Clause"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/commonmark/commonmark-java"
+        }
+    },
+    {
         "groupId": "org.jetbrains",
         "artifactId": "annotations",
         "version": "23.0.0",
@@ -2445,6 +2557,22 @@
         ],
         "scm": {
             "url": "https://github.com/jspecify/jspecify/"
+        }
+    },
+    {
+        "groupId": "org.nibor.autolink",
+        "artifactId": "autolink",
+        "version": "0.12.0",
+        "name": "autolink-java",
+        "spdxLicenses": [
+            {
+                "identifier": "MIT",
+                "name": "MIT License",
+                "url": "https://opensource.org/license/mit/"
+            }
+        ],
+        "scm": {
+            "url": "https://github.com/robinst/autolink-java"
         }
     }
 ]

@@ -313,6 +313,37 @@ Audit of Phase C against this plan. Single commit; reader-chrome scaffold + Docu
 
 ---
 
+## Audit log — Phase D
+
+Audit of Phase D against this plan. Single commit; first real `DocumentRenderer` impl (Markdown end-to-end) + commonmark-java 0.28.0 wiring + 34 new tests.
+
+### Pre-merge checklist (8 items) — verdict per item
+
+1. **R.X.1 narrow interfaces** — PASS. `MarkdownRenderer` takes only a `MarkdownParser` (no `Context`, no `LibraryRepository`). `MarkdownBody(handle: MarkdownHandle, modifier: Modifier)` takes its own narrow handle subtype. Each per-block Composable takes the concrete commonmark node it renders, not the parent handle.
+2. **R.X.2 sealed dispatch** — PASS. `MarkdownBlock` is a sealed interface (Heading / Paragraph / BlockQuote / BulletList / OrderedList / FencedCode / IndentedCode / Html / Thematic / Table / StandaloneImage / Footnote / Unknown). `RenderBlock` is one exhaustive `when` — adding a block kind = new variant + one arm. No `when (node.javaClass)` chains scattered across the package.
+3. **R.X.3 composition root** — PASS. Only `AppGraph.kt` constructs `MarkdownParser` + `MarkdownRenderer`. The reader chrome takes `FormatRegistry`; the registry returns the wired `MarkdownRenderer` for `DocumentFormat.Markdown`. No chrome file references the renderer concretely.
+4. **R.X.4 file size** — PASS. Phase D max LOC: `MarkdownBlocks.kt` 391, `MarkdownInlines.kt` 218, `MarkdownLists.kt` 129, `MarkdownBlockModel.kt` 111, `MarkdownFrontMatter.kt` 99, `MarkdownTable.kt` 94, `MarkdownRenderer.kt` 83, `MarkdownBody.kt` 80. Every file under 400 LOC. The initial `MarkdownBlocks.kt` shipped at 567 LOC; pre-commit split moved tables → `MarkdownTable.kt` and lists → `MarkdownLists.kt`.
+5. **R.X.5 NotImplementedError** — PASS. None present. Three deferrals documented in code with inline comments referencing the closing phase: code-block syntax highlighting (`// TODO(phase D+/v1.1)` in `MarkdownBlocks.FencedCodeBlockView`), image rendering via Coil (Phase F per D.10), and paginated mode (Phase D.9 — `MarkdownBody` doc comment).
+6. **R.X.6 wrong-direction imports** — PASS (with the same narrow exception Phase C documented in O.C.1). `grep -rn 'import com.eight87.pageboy.ui' format/` → zero hits. The only `format/` → `data/library/` imports are of `DocumentFormat` (a closed-enum value type used as the renderer's identity tag). `MarkdownFind`'s result type lives inside `format/markdown/` (`MarkdownMatch`) rather than reusing the chrome's `FindMatch` — see O.D.1 below.
+7. **R.X.7 Compose ISP** — PASS. `MarkdownBody` takes only its `MarkdownHandle`. Each per-block Composable takes the concrete node it renders + a `Modifier`. The link tap handler reaches `LocalContext` at the point of use (not threaded through every composable). The table/list renderers take colour scheme + typography as explicit params (instead of a single god-style object).
+8. **R.X.8 test discipline** — PASS. 34 new tests across 7 classes: `MarkdownParserTest` (5), `MarkdownTitleExtractorTest` (5), `MarkdownFrontMatterTest` (5), `MarkdownFindTest` (5), `MarkdownBlockModelTest` (5), `MarkdownRendererTest` (8 — covers `DocumentRenderer` contract end-to-end), `MarkdownBodySmokeTest` (1 — Robolectric Compose render of every block kind). Total: 70 → 104 (0 failures).
+
+### Phase D audit observations
+
+**O.D.1 — `MarkdownFind.MarkdownMatch` does not reuse `ui.reader.control.FindMatch`.** The simpler shape would be for `MarkdownFind` to return the chrome's `FindMatch` type directly, since the chrome eventually consumes the matches. But that would require `format/markdown/` to `import com.eight87.pageboy.ui.reader.control.FindMatch` — a `format/` → `ui/` import which R.X.6 forbids. The cleaner shape (and the one shipped) is for each format renderer to surface matches in its own local type; the chrome's eventual wiring adapter (Phase E+, when the chrome's find pipeline reaches into the renderer) maps `MarkdownMatch → FindMatch` at the boundary. This matches the same "narrow per-renderer surface" pattern that `DocumentHandle` subtypes already use.
+
+**O.D.2 — `ScrollPosition` was not refactored to sealed.** The Phase D plan called for a sealed `ScrollPosition` with `LazyColumn` / `PdfPage` / `EpubCfi` variants. The Phase C-shipped `ScrollPosition(pageIndex: Int, offsetFraction: Float)` data class already encodes both shapes cleanly via the `lastReadPositionMs` `(page << 20) | offset` bit-packed long — reflowable renderers use `pageIndex = 0` and the encoding collapses to just the offset; paginated renderers (Phase F PDF) use both fields. Refactoring to sealed now would force every Phase F-N renderer to pick its variant up front, without yet knowing what its scroll-position primitive actually is (EPUB CFI is the cleanest example — its scroll position is a string-shaped XPath, not an int+float). The data class encoding is a Liskov-safe lossless superset for both reflowable + paginated; the sealed refactor remains a deferred-when-it-earns-its-keep change (likely Phase M when EPUB lands a CFI-shaped variant).
+
+**O.D.3 — `MarkdownBody` does not yet wire `ScrollPersistence` or `FindInDocCommands`.** Both axes have their plumbing in place (`ScrollPersistence` accepts position records; `FindInDocCommands.InMemoryFindInDocCommands.submitMatches` accepts match lists), but the renderer-side body does not call into them. Wiring them needs the body's `LazyListState` + the document id + the chrome's `ScrollPersistence` instance + the chrome's `FindInDocCommands` instance, none of which are currently on `DocumentRenderer.Body()`'s parameter list. The clean fix is either (a) widen the renderer body interface, or (b) hoist the `LazyListState` above the body so the chrome can subscribe. Both are Phase E refactor candidates; Phase D ships the renderer + the find helper as separate units so the chrome can adopt them once the contract widening is settled (R.C.3 still pending).
+
+**O.D.4 — `markdownParser` is a one-time-shared instance.** `commonmark-java`'s `Parser` holds only the extension list + parser config — it's stateless and thread-safe per the upstream docs. `AppGraph` constructs one and shares across renderer instances. Verified by inspection (no mutable state in `Parser`'s constructor); reused-instance is also the documented commonmark performance pattern.
+
+### Test count: 70 → 104 (+34). All green.
+
+### Build: `:app:assembleDebug` + `:app:testDebugUnitTest` both green. APK debug delta 65.0 MB → 67.8 MB (+2.8 MB unminified; minified estimate ~175 KB per format-markdown.md budget — verified jar footprint of commonmark + ext is ~470 KB unminified across 7 jars, which R8 + ProGuard tree-shake heavily).
+
+---
+
 ## Pre-merge checklist (every implementation agent runs this before committing)
 
 Before any `git commit` that lands new code:

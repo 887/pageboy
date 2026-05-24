@@ -49,6 +49,12 @@ room = "2.8.0"
 ksp = "2.3.8"
 datastore = "1.1.7"
 documentfile = "1.1.0"
+# Phase D — commonmark-java 0.28.0 (released 2026-03-31). BSD-2-Clause; the
+# Licensee allowlist (Phase A) already permits BSD-2-Clause. Six GFM
+# extensions ship in v1; YAML front-matter is sniffed by a DIY ~40-LOC
+# pass before the body reaches commonmark — avoids the snakeyaml-engine
+# transitive (~150 KB minified). See docs/plans/format-markdown.md.
+commonmark = "0.28.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -94,6 +100,18 @@ androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref =
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
+
+# Phase D — commonmark-java core + the six GFM extensions Phase D ships.
+# All BSD-2-Clause; on the Licensee allowlist. The yaml-front-matter
+# extension is deliberately excluded — see format-markdown.md APK-budget
+# section + the AppGraph wiring comments.
+commonmark-core = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
+commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
+commonmark-ext-gfm-strikethrough = { module = "org.commonmark:commonmark-ext-gfm-strikethrough", version.ref = "commonmark" }
+commonmark-ext-task-list-items = { module = "org.commonmark:commonmark-ext-task-list-items", version.ref = "commonmark" }
+commonmark-ext-autolink = { module = "org.commonmark:commonmark-ext-autolink", version.ref = "commonmark" }
+commonmark-ext-footnotes = { module = "org.commonmark:commonmark-ext-footnotes", version.ref = "commonmark" }
+commonmark-ext-image-attributes = { module = "org.commonmark:commonmark-ext-image-attributes", version.ref = "commonmark" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
