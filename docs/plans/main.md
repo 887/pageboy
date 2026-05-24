@@ -129,7 +129,7 @@ Goal: first real `DocumentRenderer` impl. `commonmark-java` 0.28.0 (BSD-2-Clause
 
 ---
 
-## Phase E — plain text renderer + DocumentRenderer.Body() widening — _Shipped: E.1–E.9 in commit `<pending>`_
+## Phase E — plain text renderer + DocumentRenderer.Body() widening — _Shipped: E.1–E.9 in commit `a07332c`_
 
 Goal: render plain text with reflow at the user's font size, encoding detection (UTF-8 / UTF-16 / Windows-1252), line-ending normalization. Smallest format; stdlib-only (no third-party charset detector per `format-txt.md`'s license + APK-budget gate). Phase E also closes Phase D audit deferrals O.D.1 (`MarkdownFind` reuses neutral `FindMatch`) + O.D.3 (`DocumentRenderer.Body()` widened to consume scroll + find handles).
 
