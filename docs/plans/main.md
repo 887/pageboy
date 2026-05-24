@@ -41,7 +41,7 @@ Goal: a buildable host. These run once per developer machine. Tracked here so th
 
 ---
 
-## Phase A — scaffold — _Shipped: A.0–A.8 in commit `<PHASE-A-COMMIT>`_
+## Phase A — scaffold — _Shipped: A.0–A.8 in commit `753e6a0`_
 
 Goal: a buildable, sideload-able APK that boots into a blank Compose screen with the **tonearmboy-derived shell** (vertical navigation rail + top bar). Everything that follows assumes this exists. Mirror whisperboy Phase A almost exactly — same template choice, same gradle setup, same package convention — and then apply the [`ui-shell.md`](ui-shell.md) overlay so the empty app already wears the family's chrome.
 
