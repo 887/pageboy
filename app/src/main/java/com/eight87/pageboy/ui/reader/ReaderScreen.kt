@@ -25,6 +25,14 @@ import com.eight87.pageboy.R
 /**
  * Phase B placeholder reader. Real per-format rendering is Phase C–M.
  *
+ * Closed by Phase C: the chrome here is intentionally trivial — the
+ * SOLID-shaped reader controllers (`ReaderStateProjector`,
+ * `ScrollPersistence`, `FindInDocCommands`, etc., per `R.C` in
+ * `docs/plans/refactor-solid.md`) and the `DocumentRenderer` open/closed
+ * interface (R.X.9) land in Phase C. Until then this screen does not
+ * dispatch on format — there's nothing to render — so no `when (format)`
+ * switch exists in the reader to violate R.X.2.
+ *
  * Mounted by `PageboyApp` when the user taps a document card. Records
  * the open (via `DocumentSource.recordOpen`) so the Recents tab populates
  * even without a real reader.

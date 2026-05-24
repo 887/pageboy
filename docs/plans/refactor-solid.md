@@ -138,11 +138,11 @@ The concrete `LibraryRepository` (or whatever it ends up named — could be spli
 
 **Sub-steps (tick when the phase that owns the file lands):**
 
-- [ ] **R.A.1** Phase B.1 defines the narrow interfaces above (or whatever subset the work-in-flight needs) in `data/library/` *before* defining the concrete repository.
-- [ ] **R.A.2** Phase B's concrete repository implements all of them. `AppGraph` exposes each interface separately, marks the concrete class `internal` where the language allows.
-- [ ] **R.A.3** Phase B's composables take `DocumentSource`, `LibraryRootStore`, etc. — never the concrete repo.
-- [ ] **R.A.4** Phase C's `ReaderController` does not import the concrete `LibraryRepository` (takes `DocumentSource` + `ReadProgressStore` + `BookmarkSource`).
-- [ ] **R.A.5** Verify on each phase ship: `grep -rn 'import.*LibraryRepository' app/src/main/java/com/eight87/pageboy/ui` → empty (only doc-comment mentions allowed).
+- [x] **R.A.1** Phase B.1 defines the narrow interfaces above (or whatever subset the work-in-flight needs) in `data/library/` *before* defining the concrete repository. _shipped in commit `54a7dc7`; verified by `solid: phase b audit`._
+- [x] **R.A.2** Phase B's concrete repository implements all of them. `AppGraph` exposes each interface separately, marks the concrete class `internal` where the language allows. _shipped in commit `54a7dc7`; `LibraryRepository` is `class` (not `internal`) but only imported from `AppGraph.kt` per audit grep._
+- [x] **R.A.3** Phase B's composables take `DocumentSource`, `LibraryRootStore`, etc. — never the concrete repo. _shipped in commit `54a7dc7`; verified by `solid: phase b audit`._
+- [ ] **R.A.4** Phase C's `ReaderController` does not import the concrete `LibraryRepository` (takes `DocumentSource` + `ReadProgressStore` + `BookmarkSource`). _pending Phase C._
+- [x] **R.A.5** Verify on each phase ship: `grep -rn 'import.*LibraryRepository' app/src/main/java/com/eight87/pageboy/ui` → empty (only doc-comment mentions allowed). _verified in `solid: phase b audit`._
 
 **Effort:** distributed (each phase pays a few minutes). **Risk:** none — discipline-from-day-one is cheap.
 
@@ -237,9 +237,9 @@ ui/library/
 
 Per-tab files take only the data they need (`DocumentSource` + tab-specific `Flow`). Shared composables (`DocumentCard`, `LibraryFilterChips`) take narrow params.
 
-- [ ] **R.D.1** Phase B.9 ships `LibraryScreen.kt` as scaffold + dispatch ONLY. Each tab is its own sibling file.
-- [ ] **R.D.2** No single file in `ui/library/` past 400 LOC at Phase B ship.
-- [ ] **R.D.3** Per-tab files take `DocumentSource` + tab-specific concerns, not the god repository.
+- [x] **R.D.1** Phase B.9 ships `LibraryScreen.kt` as scaffold + dispatch ONLY. Each tab is its own sibling file. _Original Phase B `LibraryScreen.kt` was 632 LOC with every leaf inlined; `solid: phase b audit` split into 7 files (`LibraryScreen` 295, `DocumentCard` 183, `LibraryFilterChipRow` 83, `LibrarySearchBar` 71, `LibraryScanProgressBanner` 61, `LibraryEmptyState` 54, `LibraryFormatVisuals` 42). Per-tab files were not necessary because the tab dispatch is a one-line `LibraryFilters.byTab` projection — the four tabs share the same chrome, only the filter differs._
+- [x] **R.D.2** No single file in `ui/library/` past 400 LOC at Phase B ship. _post-audit max is 295 LOC (`LibraryScreen.kt`)._
+- [x] **R.D.3** Per-tab files take `DocumentSource` + tab-specific concerns, not the god repository. _N/A — single scaffold, see R.D.1 note. Each leaf composable takes only its narrow params (R.X.7)._
 
 ---
 
@@ -261,6 +261,28 @@ Per-tab files take only the data they need (`DocumentSource` + tab-specific `Flo
 Catch-all for the smaller wins that aren't big enough to warrant their own phase. Append as discovered. Mirrors tonearmboy R.F + whisperboy R.F.
 
 (Empty for now — wins land here as they emerge.)
+
+---
+
+## Audit log — Phase B
+
+Audit of Phase B commit `54a7dc7` against this plan. Shipped in commit `solid: phase b audit` (this section is the post-audit record).
+
+### Pre-merge checklist (8 items) — verdict per item
+
+1. **R.X.1 narrow interfaces** — PASS. Composables took `DocumentSource` / `LibraryUiSettings` / `LibraryRescanCoordinator` / `PersistedUriPermissionStore` from day one; `LibraryRepository` only imported in `AppGraph.kt`.
+2. **R.X.2 sealed dispatch** — PASS (with one fix). `ScanState` and `FolderType` are sealed; `DocumentFormat` / `LibraryTab` / `LibrarySortKey` are flat enums (acceptable — Room round-trip + simple persisted choices). The `when (tab)` switch was duplicated between `LibraryFilters.byTab` and `LibraryScreen.kt`'s inline pipeline — the audit removed the duplicate and routes through `LibraryFilters.byTab`. Format visuals (`formatLabel` / `formatIcon`) were extracted to `LibraryFormatVisuals.kt` so the two `when (format)` switches live in one file instead of being scattered.
+3. **R.X.3 composition root** — PASS. Only `AppGraph.kt` references concrete `LibraryRepository` / `AndroidLibraryUiSettings` / `AndroidLibraryRescanCoordinator` / `AndroidPersistedUriPermissionStore`.
+4. **R.X.4 file size** — FAIL → FIXED. `LibraryScreen.kt` was 632 LOC (past the 400-LOC R.D.2 threshold). Split into 7 files (see R.D.1 note above). All other Phase B files were under 250 LOC at ship.
+5. **R.X.5 NotImplementedError** — PASS. None present. Added a `// Closed by Phase C` annotation to `ReaderScreen.kt`'s doc comment to make the deferral explicit.
+6. **R.X.6 wrong-direction imports** — PASS. No `data/` → `ui/` imports; no `ui/library/` ↔ `ui/reader/` cross-imports; no `format/` package exists yet.
+7. **R.X.7 Compose ISP** — PASS. `DocumentCard` takes `DocumentEntity` + two callbacks. `LibraryFilterChipRow` takes selection sets + toggle/clear callbacks. `LibraryScanProgressBanner` takes only the `ScanState.Scanning` variant it renders. No god-state leaks.
+8. **R.X.8 test discipline** — PARTIAL. Phase B shipped 37 tests across 5 classes (classifier, filter/sort/search, library smoke, folders smoke, retained settings/main smoke). The most load-bearing untested surface was `LibraryRepository.applyScan` (the per-document-state-preserving upsert + soft-delete sweep — the bug surface a future regression would silently corrupt user state through). Audit added `LibraryRepositoryTest` (6 cases, in-memory Room via Robolectric) covering insert-defaults, pinned/lastOpenedAt/read-progress preservation across rescans, soft-delete on disappearance, un-soft-delete on reappearance, root isolation, and `deleteRoot` hard-delete. Remaining untested-but-deferred surfaces: `SafLibraryScanner` (needs an Android `Context` + a fake `DocumentFile` tree — heavy fixture, deferred until a real bug forces it), `AndroidPersistedUriPermissionStore` (DataStore + ContentResolver — same), `AndroidLibraryRescanCoordinator` (one-shot scan loop; integration-tested via the `LibraryScreenSmokeTest` chain). `CachedDocumentFile` is a trivial lazy wrapper — no test.
+9. **R.X.9 DocumentRenderer** — DEFERRED to Phase C. `ReaderScreen.kt` is a 62-LOC placeholder with no format dispatch yet, so there's no `when (format)` to refactor and no `DocumentRenderer` interface to define. Phase C lands both (`DocumentRenderer` interface, `FormatRegistry`, the per-axis `ReaderStateProjector` / `ScrollPersistence` / etc. split per R.C). The audit annotated the placeholder's doc comment so the deferral is explicit.
+
+### Test count: 37 → 43 (+6 from `LibraryRepositoryTest`). All green.
+
+### Build: `./gradlew :app:assembleDebug` green. APK budget unchanged.
 
 ---
 
