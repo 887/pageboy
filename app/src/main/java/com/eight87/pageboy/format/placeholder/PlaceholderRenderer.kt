@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.eight87.pageboy.R
 import com.eight87.pageboy.data.library.DocumentFormat
+import com.eight87.pageboy.domain.render.RendererContext
 import com.eight87.pageboy.format.api.DocumentBytesSource
 import com.eight87.pageboy.format.api.DocumentHandle
 import com.eight87.pageboy.format.api.DocumentRenderer
@@ -55,7 +56,10 @@ class PlaceholderRenderer(
   }
 
   @Composable
-  override fun Body(handle: DocumentHandle, modifier: Modifier) {
+  override fun Body(handle: DocumentHandle, context: RendererContext, modifier: Modifier) {
+    // Placeholder does not scroll and does not search; the [context]
+    // handles are accepted (R.X.9 contract) and intentionally unread.
+    @Suppress("UNUSED_PARAMETER") val ctx = context
     val placeholder = handle as? PlaceholderHandle
     val formatLabel = stringResource(formatLabelRes(handle.format))
     Column(

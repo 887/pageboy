@@ -1,5 +1,6 @@
 package com.eight87.pageboy.ui.reader.control
 
+import com.eight87.pageboy.domain.render.FindMatch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

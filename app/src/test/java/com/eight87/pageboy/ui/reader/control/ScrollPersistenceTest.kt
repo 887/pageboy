@@ -3,6 +3,7 @@ package com.eight87.pageboy.ui.reader.control
 import com.eight87.pageboy.data.library.DocumentEntity
 import com.eight87.pageboy.data.library.DocumentFormat
 import com.eight87.pageboy.data.library.DocumentSource
+import com.eight87.pageboy.domain.render.ScrollPosition
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -23,10 +23,12 @@ import com.eight87.pageboy.format.markdown.MarkdownParser
 import com.eight87.pageboy.format.markdown.MarkdownRenderer
 import com.eight87.pageboy.format.registry.CompiledFormatRegistry
 import com.eight87.pageboy.format.registry.FormatRegistry
+import com.eight87.pageboy.domain.render.RendererReadingPrefs
+import com.eight87.pageboy.format.txt.TxtRenderer
 import com.eight87.pageboy.ui.reader.control.AndroidShareExportCommands
 import com.eight87.pageboy.ui.reader.control.DefaultReaderStateProjector
+import com.eight87.pageboy.ui.reader.control.DefaultRendererReadingPrefs
 import com.eight87.pageboy.ui.reader.control.DefaultScrollPersistence
-import com.eight87.pageboy.ui.reader.control.FindInDocCommands
 import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
 import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
 import com.eight87.pageboy.ui.reader.control.ScrollPersistence
@@ -134,6 +136,7 @@ class AppGraph(private val context: Context) {
     CompiledFormatRegistry(
       renderers = mapOf<DocumentFormat, DocumentRenderer>(
         DocumentFormat.Markdown to MarkdownRenderer(markdownParser),
+        DocumentFormat.Txt to TxtRenderer(),
       ),
     )
   }
@@ -161,10 +164,19 @@ class AppGraph(private val context: Context) {
    * find state would survive reader-screen disposal and leak between
    * documents.
    */
-  val findInDocCommandsFactory: () -> FindInDocCommands = { InMemoryFindInDocCommands() }
+  val findInDocCommandsFactory: () -> InMemoryFindInDocCommands = { InMemoryFindInDocCommands() }
 
   val shareExportCommands: ShareExportCommands by lazy {
     AndroidShareExportCommands(context.applicationContext)
+  }
+
+  /**
+   * Phase E.1 — renderer-facing read-only view of [readerSettings].
+   * Lives on the AppGraph (not per-document) because reading prefs are
+   * app-scoped, not per-document.
+   */
+  val rendererReadingPrefs: RendererReadingPrefs by lazy {
+    DefaultRendererReadingPrefs(scope = applicationScope, settings = readerSettings)
   }
 
   companion object {

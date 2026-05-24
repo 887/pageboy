@@ -1,6 +1,7 @@
 package com.eight87.pageboy.ui.reader.control
 
 import com.eight87.pageboy.data.library.DocumentSource
+import com.eight87.pageboy.domain.render.ScrollPosition
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -33,18 +34,6 @@ interface ScrollPersistence {
    */
   fun recordPosition(documentId: String, position: ScrollPosition)
 }
-
-/**
- * Persisted scroll position. Renderer-specific semantics — PDF reads
- * `pageIndex` + within-page `offsetFraction`; reflowable formats
- * (Markdown / Txt / EPUB) ignore `pageIndex` and read only
- * `offsetFraction`. The reader chrome doesn't interpret the value; it's
- * passed through to the renderer's `Body()` to apply on first compose.
- */
-data class ScrollPosition(
-  val pageIndex: Int = 0,
-  val offsetFraction: Float = 0f,
-)
 
 /**
  * Default [ScrollPersistence] backed by [DocumentSource.setReadProgress].

@@ -41,11 +41,13 @@ import com.eight87.pageboy.data.library.LibraryRescanCoordinator
 import com.eight87.pageboy.data.library.LibraryTab
 import com.eight87.pageboy.data.library.LibraryUiSettings
 import com.eight87.pageboy.data.library.PersistedUriPermissionStore
+import com.eight87.pageboy.domain.render.RendererReadingPrefs
 import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.ui.library.LibraryScreen
 import com.eight87.pageboy.ui.reader.ReaderScreen
-import com.eight87.pageboy.ui.reader.control.FindInDocCommands
+import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
 import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
+import com.eight87.pageboy.ui.reader.control.ScrollPersistence
 import com.eight87.pageboy.ui.reader.control.ShareExportCommands
 import com.eight87.pageboy.ui.settings.AboutScreen
 import com.eight87.pageboy.ui.settings.LicensesScreen
@@ -99,7 +101,9 @@ fun PageboyApp(
   val effectiveProjector: ReaderStateProjector? = appGraph?.readerStateProjector
   val effectiveFormatRegistry: FormatRegistry? = appGraph?.formatRegistry
   val effectiveShareCommands: ShareExportCommands? = appGraph?.shareExportCommands
-  val findFactory: (() -> FindInDocCommands)? = appGraph?.findInDocCommandsFactory
+  val findFactory: (() -> InMemoryFindInDocCommands)? = appGraph?.findInDocCommandsFactory
+  val effectiveScrollPersistence: ScrollPersistence? = appGraph?.scrollPersistence
+  val effectiveReadingPrefs: RendererReadingPrefs? = appGraph?.rendererReadingPrefs
 
   // Touch the coordinator so the lazy block runs and start() fires.
   LaunchedEffect(effectiveCoordinator) { /* trigger lazy init */ }
@@ -237,7 +241,8 @@ fun PageboyApp(
         }
         entry<ReaderRoute> { route ->
           if (effectiveProjector != null && effectiveFormatRegistry != null &&
-            effectiveShareCommands != null && findFactory != null
+            effectiveShareCommands != null && findFactory != null &&
+            effectiveScrollPersistence != null && effectiveReadingPrefs != null
           ) {
             // One FindInDocCommands per reader instance — find state is
             // per-document, see AppGraph.findInDocCommandsFactory.
@@ -248,6 +253,8 @@ fun PageboyApp(
               formatRegistry = effectiveFormatRegistry,
               findInDocCommands = find,
               shareExportCommands = effectiveShareCommands,
+              scrollPersistence = effectiveScrollPersistence,
+              readingPrefs = effectiveReadingPrefs,
               onBack = { backStack.removeLastOrNull() },
             )
           }

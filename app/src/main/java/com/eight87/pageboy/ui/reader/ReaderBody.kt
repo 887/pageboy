@@ -5,36 +5,44 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import com.eight87.pageboy.R
+import com.eight87.pageboy.domain.render.RendererContext
+import com.eight87.pageboy.domain.render.RendererReadingPrefs
 import com.eight87.pageboy.format.registry.FormatRegistry
+import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
 import com.eight87.pageboy.ui.reader.control.ReaderState
+import com.eight87.pageboy.ui.reader.control.ScrollPersistence
+import com.eight87.pageboy.ui.reader.control.buildRendererContext
 
 /**
  * Phase C.5 — body slot. Branches on the sealed [ReaderState] (R.X.2) +
  * dispatches the renderer's `Body()` via the [FormatRegistry] (R.X.9).
  *
  * No `when (format)` switch here — the registry returns whichever
- * renderer was wired in [com.eight87.pageboy.AppGraph]. Per-format
- * scroll-position-restore happens inside the renderer's own `Body()`;
- * the chrome doesn't peek into renderer internals.
+ * renderer was wired in [com.eight87.pageboy.AppGraph].
  *
- * State transitions surface here as:
- *  - [ReaderState.Idle] → empty box (the projector should be in
- *    Opening by the time the chrome composes, but the branch is here
- *    for completeness)
- *  - [ReaderState.Opening] → centered spinner + "Opening…" label
- *  - [ReaderState.Open] → renderer body
- *  - [ReaderState.Failed] → [ReaderErrorState] with retry
+ * Phase E.3 — when the state is [ReaderState.Open] the body builds a
+ * [RendererContext] from the chrome handles (scroll persistence + the
+ * concrete find-commands instance for this reader + reading prefs) and
+ * threads it into the renderer's `Body(...)`. Future renderer handles
+ * (annotation commands at Phase G, signature commands at Phase H) join
+ * via additional fields on [RendererContext], not by widening this
+ * call site.
  */
 @Composable
 internal fun ReaderBody(
   state: ReaderState,
   formatRegistry: FormatRegistry,
+  documentId: String,
+  scrollPersistence: ScrollPersistence,
+  findCommands: InMemoryFindInDocCommands,
+  readingPrefs: RendererReadingPrefs,
   onRetry: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -61,7 +69,15 @@ internal fun ReaderBody(
       is ReaderState.Open -> {
         val handle = state.handle
         val renderer = formatRegistry.rendererFor(handle.format)
-        renderer.Body(handle = handle, modifier = Modifier.fillMaxSize())
+        val context = remember(documentId, scrollPersistence, findCommands, readingPrefs) {
+          buildRendererContext(
+            documentId = documentId,
+            scrollPersistence = scrollPersistence,
+            findCommands = findCommands,
+            readingPrefs = readingPrefs,
+          )
+        }
+        renderer.Body(handle = handle, context = context, modifier = Modifier.fillMaxSize())
       }
       is ReaderState.Failed -> {
         ReaderErrorState(

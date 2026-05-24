@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import com.eight87.pageboy.TestApplication
+import com.eight87.pageboy.ui.reader.control.noopRendererContext
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -74,7 +75,7 @@ class MarkdownBodySmokeTest {
     )
     composeRule.setContent {
       MaterialTheme {
-        MarkdownBody(handle = handle)
+        MarkdownBody(handle = handle, context = noopRendererContext())
       }
     }
     composeRule.onNodeWithTag("markdown_body").assertExists()

@@ -8,10 +8,13 @@ import com.eight87.pageboy.data.library.DocumentFormat
 import com.eight87.pageboy.format.placeholder.PlaceholderHandle
 import com.eight87.pageboy.format.placeholder.PlaceholderRenderer
 import com.eight87.pageboy.format.registry.CompiledFormatRegistry
-import com.eight87.pageboy.ui.reader.control.FindInDocCommands
+import com.eight87.pageboy.domain.render.RendererReadingPrefs
+import com.eight87.pageboy.domain.render.ScrollPosition
 import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
+import com.eight87.pageboy.ui.reader.control.NoopRendererReadingPrefs
 import com.eight87.pageboy.ui.reader.control.ReaderState
 import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
+import com.eight87.pageboy.ui.reader.control.ScrollPersistence
 import com.eight87.pageboy.ui.reader.control.ShareExportCommands
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,7 +49,13 @@ class ReaderScreenSmokeTest {
     override fun shareCurrentDocument(documentUriString: String, displayName: String) {}
   }
 
-  private fun fakeFindCommands(): FindInDocCommands = InMemoryFindInDocCommands()
+  private class NoopScroll : ScrollPersistence {
+    override suspend fun lastPosition(documentId: String): ScrollPosition? = null
+    override fun recordPosition(documentId: String, position: ScrollPosition) {}
+  }
+
+  private fun fakeFindCommands(): InMemoryFindInDocCommands = InMemoryFindInDocCommands()
+  private fun fakeReadingPrefs(): RendererReadingPrefs = NoopRendererReadingPrefs()
 
   @Test
   fun `renders chrome plus placeholder body when state is Open`() {
@@ -67,6 +76,8 @@ class ReaderScreenSmokeTest {
         formatRegistry = registryWithPlaceholder,
         findInDocCommands = fakeFindCommands(),
         shareExportCommands = NoopShare(),
+        scrollPersistence = NoopScroll(),
+        readingPrefs = fakeReadingPrefs(),
         onBack = {},
       )
     }
@@ -90,6 +101,8 @@ class ReaderScreenSmokeTest {
         formatRegistry = registry,
         findInDocCommands = fakeFindCommands(),
         shareExportCommands = NoopShare(),
+        scrollPersistence = NoopScroll(),
+        readingPrefs = fakeReadingPrefs(),
         onBack = {},
       )
     }

@@ -6,6 +6,7 @@ import com.eight87.pageboy.TestApplication
 import com.eight87.pageboy.data.library.DocumentEntity
 import com.eight87.pageboy.data.library.DocumentFormat
 import com.eight87.pageboy.data.library.DocumentSource
+import com.eight87.pageboy.domain.render.RendererContext
 import com.eight87.pageboy.format.api.DocumentBytesSource
 import com.eight87.pageboy.format.api.DocumentHandle
 import com.eight87.pageboy.format.api.DocumentRenderer
@@ -51,7 +52,7 @@ class ReaderStateProjectorTest {
       openCalls++
       return handle
     }
-    @Composable override fun Body(handle: DocumentHandle, modifier: Modifier) = Unit
+    @Composable override fun Body(handle: DocumentHandle, context: RendererContext, modifier: Modifier) = Unit
   }
 
   private class FailingRenderer : DocumentRenderer {
@@ -59,7 +60,7 @@ class ReaderStateProjectorTest {
     override suspend fun open(source: DocumentBytesSource): DocumentHandle {
       throw IllegalStateException("boom")
     }
-    @Composable override fun Body(handle: DocumentHandle, modifier: Modifier) = Unit
+    @Composable override fun Body(handle: DocumentHandle, context: RendererContext, modifier: Modifier) = Unit
   }
 
   private fun fakeEntity(id: String) = DocumentEntity(

@@ -16,10 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.eight87.pageboy.domain.render.RendererReadingPrefs
 import com.eight87.pageboy.format.registry.FormatRegistry
-import com.eight87.pageboy.ui.reader.control.FindInDocCommands
+import com.eight87.pageboy.ui.reader.control.InMemoryFindInDocCommands
 import com.eight87.pageboy.ui.reader.control.ReaderState
 import com.eight87.pageboy.ui.reader.control.ReaderStateProjector
+import com.eight87.pageboy.ui.reader.control.ScrollPersistence
 import com.eight87.pageboy.ui.reader.control.ShareExportCommands
 
 /**
@@ -47,8 +49,10 @@ fun ReaderScreen(
   documentId: String,
   readerStateProjector: ReaderStateProjector,
   formatRegistry: FormatRegistry,
-  findInDocCommands: FindInDocCommands,
+  findInDocCommands: InMemoryFindInDocCommands,
   shareExportCommands: ShareExportCommands,
+  scrollPersistence: ScrollPersistence,
+  readingPrefs: RendererReadingPrefs,
   onBack: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -125,6 +129,10 @@ fun ReaderScreen(
     ReaderBody(
       state = state,
       formatRegistry = formatRegistry,
+      documentId = documentId,
+      scrollPersistence = scrollPersistence,
+      findCommands = findInDocCommands,
+      readingPrefs = readingPrefs,
       onRetry = { readerStateProjector.open(documentId) },
       modifier = Modifier.fillMaxSize(),
     )

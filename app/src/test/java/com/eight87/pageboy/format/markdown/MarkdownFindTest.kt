@@ -37,7 +37,7 @@ class MarkdownFindTest {
   fun `snippets include surrounding context`() {
     val matches = MarkdownFind.findAll("The quick brown fox jumps over the lazy dog.", "fox")
     assertEquals(1, matches.size)
-    assertTrue("snippet should contain the match", matches[0].contextSnippet.contains("fox"))
+    assertTrue("snippet should contain the match", matches[0].contextSnippet?.contains("fox") == true)
   }
 
   @Test

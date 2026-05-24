@@ -3,6 +3,7 @@ package com.eight87.pageboy.format.registry
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.eight87.pageboy.data.library.DocumentFormat
+import com.eight87.pageboy.domain.render.RendererContext
 import com.eight87.pageboy.format.api.DocumentBytesSource
 import com.eight87.pageboy.format.api.DocumentHandle
 import com.eight87.pageboy.format.api.DocumentRenderer
@@ -28,7 +29,7 @@ class FormatRegistryTest {
   private class FakePdfRenderer : DocumentRenderer {
     override val format = DocumentFormat.Pdf
     override suspend fun open(source: DocumentBytesSource): DocumentHandle = FakePdfHandle()
-    @Composable override fun Body(handle: DocumentHandle, modifier: Modifier) = Unit
+    @Composable override fun Body(handle: DocumentHandle, context: RendererContext, modifier: Modifier) = Unit
   }
 
   @Test

@@ -1,6 +1,6 @@
 # pageboy — main build plan
 
-## Status: 🟢 Phase D shipped; Phase E next
+## Status: 🟢 Phase E shipped; Phase F next
 
 _Phase 0 verified, Phase A shipped (buildable Compose APK with family chrome — vertical nav rail, top bar, settings catalog DSL, AboutScreen, LicensesScreen, Licensee inventory). Phase B shipped (multi-root SAF document library — Room schema, four folder modes, magic-byte + extension classifier covering all 8 formats, scanner + rescan coordinator + repository, LibraryScreen with four whisperboy-style tabs + filters + search + sort, folders management screen, scan progress banner, Library settings section). Phases C+ are **stub headers** awaiting per-format research (see [`format-research.md`](format-research.md)) — each one names the format-research plan it depends on, and the research agent who owns that plan is expected to fill in the sub-step checkboxes for the corresponding phase before any implementation lands._
 
@@ -129,9 +129,19 @@ Goal: first real `DocumentRenderer` impl. `commonmark-java` 0.28.0 (BSD-2-Clause
 
 ---
 
-## Phase E — plain text renderer _(stub — depends on `docs/plans/format-txt.md`)_
+## Phase E — plain text renderer + DocumentRenderer.Body() widening — _Shipped: E.1–E.9 in commit `<pending>`_
 
-Goal: render plain text with reflow at the user's font size, encoding detection (UTF-8 / UTF-16 / Windows-1252), line-ending normalization. Smallest format; minimal deps. Sub-steps land with the research plan.
+Goal: render plain text with reflow at the user's font size, encoding detection (UTF-8 / UTF-16 / Windows-1252), line-ending normalization. Smallest format; stdlib-only (no third-party charset detector per `format-txt.md`'s license + APK-budget gate). Phase E also closes Phase D audit deferrals O.D.1 (`MarkdownFind` reuses neutral `FindMatch`) + O.D.3 (`DocumentRenderer.Body()` widened to consume scroll + find handles).
+
+- [x] **E.1** Widen `DocumentRenderer.Body(handle, modifier)` → `Body(handle, context, modifier)`. New `RendererContext` value type in `domain/render/` bundles `RendererScrollSink` + `RendererFindSink` + `RendererReadingPrefs` so future handles (annotation commands at Phase G, signature commands at Phase H) slot in as fields on the data class rather than further signature widenings. Closes O.D.3.
+- [x] **E.2** Markdown renderer wires the context: `LazyListState` ↔ `RendererScrollSink` (load on first compose + record on scroll-stop); find-in-doc walks `rawText` with case-insensitive matches, publishes back via `submitMatches`, scroll-jumps to the current match via a line-offset → block-index heuristic. `MarkdownFind` returns the neutral `FindMatch` directly (O.D.1 closed). Inline highlight on matches deferred to v1.1 (the AST-walk pass earns its keep alongside PDF / EPUB in Phase F+).
+- [x] **E.3** `ReaderBody.kt` chrome builds the `RendererContext` per render via `buildRendererContext(...)`; `ReaderScreen` accepts the concrete `InMemoryFindInDocCommands` (so the adapter can push matches back) + `ScrollPersistence` + `RendererReadingPrefs`.
+- [x] **E.4** `format/txt/` package — `TxtRenderer` + `TxtHandle` + `TxtLineSource` (in-memory with very-long-line wrapping per format-txt.md G3; windowing surface at LazyColumn level) + `TxtEncodingDetector` (BOM sniff for UTF-8/16/32 + UTF-16 byte-zero-density heuristic + UTF-8 trial decode + Windows-1252 fallback) + `TxtBody` (`LazyColumn` of monospace `Text` items keyed by line index) + `TxtFind` (case-insensitive line-level search emitting neutral `FindMatch`).
+- [x] **E.5** `AppGraph.formatRegistry` registers `TxtRenderer` for `DocumentFormat.Txt`; other formats still fall through to `PlaceholderRenderer`. Also adds `rendererReadingPrefs` as the AppGraph-scoped read-only view of `ReaderSettings`.
+- [x] **E.6** 45 new tests across 8 classes — `TxtEncodingDetectorTest` (9), `TxtLineSourceTest` (13), `TxtFindTest` (5), `TxtRendererTest` (8), `TxtBodySmokeTest` (1), `MarkdownBlockIndexTest` (5), `MarkdownBodyFindSmokeTest` (2), `MarkdownScrollPersistenceSmokeTest` (2). Total: 104 → 149 (0 failures).
+- [x] **E.7** `:app:assembleDebug` + `:app:testDebugUnitTest` both green. Pre-merge checklist (8 items) all PASS.
+- [x] **E.8** Smoke on `emulator-5554`: pushed plain-UTF-8 / large log / cp1252 / mixed-encoding TXT fixtures to `/sdcard/Documents/pageboy-test/`, verified each renders correctly (UTF-8 non-ASCII intact, large log scrolls smoothly via LazyColumn windowing, cp1252 high bytes resolve to right characters). Scroll persistence + markdown find-in-doc both verified by close/reopen + jump. Screencaps at `/tmp/pageboy-E-*`.
+- [x] **E.9** This main.md updated; refactor-solid.md Phase E audit appended.
 
 ---
 

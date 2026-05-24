@@ -1,5 +1,6 @@
 package com.eight87.pageboy.ui.reader.control
 
+import com.eight87.pageboy.domain.render.FindMatch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,20 +29,6 @@ interface FindInDocCommands {
   fun previous()
   fun clear()
 }
-
-/**
- * Single match the renderer surfaced. Generic across formats —
- * [pageIndex] is null for reflowable formats; [contextSnippet] is the
- * short surrounding-text hint the find panel can render in a results
- * list. Phase C doesn't surface a results list; the contract leaves
- * room for one.
- */
-data class FindMatch(
-  val rangeStart: Int,
-  val rangeEnd: Int,
-  val pageIndex: Int? = null,
-  val contextSnippet: String? = null,
-)
 
 /**
  * Default in-memory [FindInDocCommands]. The reader chrome wires this

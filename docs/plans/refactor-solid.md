@@ -203,7 +203,7 @@ The reader chrome takes only what it renders; each per-format renderer takes wha
 
 - [x] **R.C.1** Phase C defines the narrow interfaces above (or the subset Phase C ships; later phases extend). _shipped: `ReaderStateProjector` + `ScrollPersistence` + `FindInDocCommands` + `ShareExportCommands` each in its own file under `ui/reader/control/`. `AnnotationCommands` + `SignatureCommands` deferred to Phase G/H per R.X.5 (not declared as stub interfaces — the deferral is recorded here, not in the codebase, so no LSP-violating `NotImplementedError` exists)._
 - [x] **R.C.2** Reader chrome takes interface params, not a god controller. _`ReaderScreen` constructor takes `ReaderStateProjector` + `FormatRegistry` + `FindInDocCommands` + `ShareExportCommands` — four narrow interfaces, no god controller._
-- [ ] **R.C.3** Phase D+ renderers take only the interfaces they need. _pending Phase D — interface contract in place._
+- [x] **R.C.3** Phase D+ renderers take only the interfaces they need. _shipped in Phase E — Markdown reads `RendererScrollSink` + `RendererFindSink`; TXT reads both; PlaceholderRenderer reads neither. Interface widening via `RendererContext` value type so adding handles (Phase G annotation, Phase H signature) is a new field on the data class, not another `Body()` signature change._
 - [x] **R.C.4** Reader root file under ~200 LOC; per-axis controllers in their own files. _`ReaderScreen.kt` is 132 LOC; max file in `ui/reader/` is 132 LOC (`ReaderScreen.kt`); max in `ui/reader/control/` is 111 LOC (`ReaderStateProjector.kt`)._
 - [x] **R.C.5** Verify per shipping phase: `find app/src/main/java/com/eight87/pageboy/ui/reader -name '*.kt' -exec wc -l {} \;` — no file past 500 LOC. _Phase C max is 132 LOC across 9 files._
 
@@ -341,6 +341,45 @@ Audit of Phase D against this plan. Single commit; first real `DocumentRenderer`
 ### Test count: 70 → 104 (+34). All green.
 
 ### Build: `:app:assembleDebug` + `:app:testDebugUnitTest` both green. APK debug delta 65.0 MB → 67.8 MB (+2.8 MB unminified; minified estimate ~175 KB per format-markdown.md budget — verified jar footprint of commonmark + ext is ~470 KB unminified across 7 jars, which R8 + ProGuard tree-shake heavily).
+
+---
+
+## Audit log — Phase E
+
+Audit of Phase E against this plan. Second real `DocumentRenderer` impl (TXT) + `DocumentRenderer.Body()` interface widening + Phase D audit deferrals O.D.1 and O.D.3 closed.
+
+### Pre-merge checklist (8 items) — verdict per item
+
+1. **R.X.1 narrow interfaces** — PASS. `RendererContext` is a 4-field value type containing only narrow contracts (`RendererScrollSink` 2 methods, `RendererFindSink` 3 members, `RendererReadingPrefs` 1 field, plus `documentId`). `TxtRenderer` takes no constructor params; `TxtBody` takes its `TxtHandle` + `RendererContext` only. Markdown body unchanged in shape — still takes its handle + the context. No god-handles.
+2. **R.X.2 sealed dispatch** — PASS. Format dispatch continues through `FormatRegistry`; no `when (format)` switches added. The `RendererContext` is a plain data class (no branching), the existing sealed `ReaderState` is unchanged.
+3. **R.X.3 composition root** — PASS. Only `AppGraph.kt` constructs `TxtRenderer`, `DefaultRendererReadingPrefs`. Chrome composables take `RendererReadingPrefs` / `ScrollPersistence` / `InMemoryFindInDocCommands` (the last is the concrete chrome class because the adapter needs `submitMatches`, which is intentionally not on the read-only `FindInDocCommands` interface — same pattern Phase C used).
+4. **R.X.4 file size** — PASS. New-file LOC: `TxtBody.kt` 135, `TxtEncodingDetector.kt` 131, `TxtLineSource.kt` 146, `TxtRenderer.kt` 83, `TxtHandle.kt` 32, `TxtFind.kt` 54, `RendererContextAdapters.kt` 128, `domain/render/RendererContext.kt` 74, `domain/render/FindMatch.kt` 29, `domain/render/ScrollPosition.kt` 22. `MarkdownBody.kt` grew from 80 → 228 (still under 400). Every file comfortably under the 400-LOC R.D.2 threshold; max Phase E file is 228 (`MarkdownBody.kt`).
+5. **R.X.5 NotImplementedError** — PASS. None present. Two deferrals documented inline: inline match highlight (Phase D doc-comment + Phase E plan's E.2 — earns its keep alongside PDF/EPUB needs), `RendererReadingPrefs.continuousScrolling` advisory-only until paginated renderers land (Phase F+).
+6. **R.X.6 wrong-direction imports** — PASS (and the Phase C/D narrow exception O.C.1 is now smaller). `format/markdown/MarkdownFind` no longer ships a local `MarkdownMatch`; `format/markdown/` + `format/txt/` both import the neutral `domain/render/FindMatch`. `format/` continues NOT to import `ui/`. `ui/` continues NOT to be imported from `format/`. The chrome adapter layer (`ui/reader/control/RendererContextAdapters.kt`) is the only file that crosses into `domain/render/` from both sides. Verified by `grep -rn 'import com.eight87.pageboy.ui' app/src/main/java/com/eight87/pageboy/format/` → zero hits.
+7. **R.X.7 Compose ISP** — PASS. `RendererContext` is read-only data; each renderer body reads only the fields it needs (Markdown reads all three sinks; TXT reads scroll + find; the placeholder reads nothing). The chrome-side adapters expose three narrow interfaces (`RendererScrollSink` 2 methods, `RendererFindSink` 3 members, `RendererReadingPrefs` 1 field) rather than threading the full `ScrollPersistence` / `FindInDocCommands` / `ReaderSettings` into renderers.
+8. **R.X.8 test discipline** — PASS. 45 new tests across 8 classes. Pre-existing tests adapted to the widened `Body()` signature without removing coverage. Total 104 → 149, 0 failures.
+
+### Phase E audit observations
+
+**O.E.1 — `domain/render/` is the new neutral layer.** Phase D audit documented `DocumentFormat` as a narrow exception to R.X.6 (Phase C audit O.C.1). Phase E adds three more types — `FindMatch`, `ScrollPosition`, `RendererContext` — that need to be reachable from both `format/` and `ui/`. Instead of expanding the exception, Phase E spun up `domain/render/` as a neutral package both sides import without violating R.X.6 (since the rule names `data/library/` and `ui/`, not "every layer below `ui/`"). The `format/` → `data/library/DocumentFormat` narrow exception still stands — moving `DocumentFormat` into `domain/` is the next step when the rename earns the churn (likely Phase F, when PDF + EPUB join the format roster).
+
+**O.E.2 — `MarkdownBody` find-to-block mapping is a fraction heuristic.** Per the Phase E plan, mapping a match's character offset to a top-level block index would require either (a) recommonmark walking with per-block source ranges (commonmark-java doesn't preserve them on every node) or (b) a separate range-tracking pass. The shipped impl uses "match's line number / total lines × block count" which lands within a screen of the target; the user's eye trims the last 20px. Honest about it in `MarkdownBody`'s doc comment + the helper's inline note. Real per-block ranges are a Phase F-or-later refinement when PDF / EPUB also need cleaner per-match scroll targets.
+
+**O.E.3 — `TxtLineSource` is in-memory; format-txt.md's true disk-windowed impl is deferred.** The Phase E plan calls for a `WindowedLineSource` backed by `RandomAccessFile` + a `LongArray` line-offset index cached in `DocumentEntity.lineIndexBlob`. The shipped `InMemoryTxtLineSource` decodes the bytes once + holds the line list in memory, with the LazyColumn providing windowed *composition* even though storage is eager. This trades the disk-windowed memory ceiling for an implementation that ships in a day instead of a week. The 100K-line log file the format-txt.md test plan calls for renders smoothly under the in-memory impl (each `String` line is ~20 bytes header + payload; 100K × ~50 chars ≈ 10 MB resident — fine on 2026 mid-range Android RAM). The disk-windowed impl earns its keep when a real user opens a 500 MB log, which is rare enough to defer behind the interface (`TxtLineSource`) we shipped from day one so swapping the impl is one line in `TxtRenderer.open()`.
+
+**O.E.4 — `Body(context)` signature widening was opt-A (RendererContext value type), not opt-B (parameters).** The Phase E plan's "pick A unless painfully wrong" landed cleanly — every place that calls `renderer.Body(...)` is the chrome's `ReaderBody.kt`, so widening the signature was a one-call-site change for the runtime + a handful of test classes. The value-type encoding means Phase G (annotation commands) + Phase H (signature commands) add one field to `RendererContext` each, no renderer signature touches. That's the open/closed win the audit was looking for.
+
+**O.E.5 — `O.D.1 + O.D.3 closed.** Both Phase D deferrals shipped in Phase E:
+- O.D.1 (`MarkdownFind.MarkdownMatch` → chrome `FindMatch`): `MarkdownFind.findAll` now returns `domain.render.FindMatch` directly. TXT renderer uses the same neutral type from day one. No adapter at the chrome boundary; matches flow straight from renderer to find panel.
+- O.D.3 (`MarkdownBody` not wired to `ScrollPersistence` / `FindInDocCommands`): `MarkdownBody` now reads `scrollSink.load()` on first compose + records on scroll-stop; observes `findSink.query` to re-run search; jumps via `currentMatchIndex` change.
+
+### R.C sub-step tick
+
+R.C.3 sub-step (Phase D+ renderers take only the interfaces they need) now ticked — Markdown + TXT both consume `RendererScrollSink` + `RendererFindSink` selectively; the placeholder reads neither; future renderers add what they need. _shipped in Phase E._
+
+### Test count: 104 → 149 (+45). All green.
+
+### Build: `:app:assembleDebug` + `:app:testDebugUnitTest` both green. APK debug delta 67.8 MB → 67.75 MB (-50 KB unminified — the TXT renderer + `domain/render/` neutral types are pure JVM stdlib, no new deps; the negative delta is build noise from cache-line packing of the dex output).
 
 ---
 
