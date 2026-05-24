@@ -72,6 +72,32 @@ android {
     packaging {
       resources {
         excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // Phase I/J — Apache POI + XmlBeans + aalto bring in a handful of
+        // META-INF artifacts (LICENSE / NOTICE / DEPENDENCIES / versions /
+        // services duplicates across the OOXML schema jars) that Gradle's
+        // mergeJavaResource step otherwise treats as conflicts. The license
+        // texts themselves are surfaced via LicensesScreen + the Licensee
+        // inventory (oss-licenses.md) — excluding them from packaging is
+        // standard practice for POI on Android.
+        excludes += listOf(
+          "META-INF/LICENSE",
+          "META-INF/LICENSE.txt",
+          "META-INF/NOTICE",
+          "META-INF/NOTICE.txt",
+          "META-INF/DEPENDENCIES",
+          "META-INF/INDEX.LIST",
+          "META-INF/*.kotlin_module",
+          "META-INF/versions/9/OSGI-INF/MANIFEST.MF",
+          "META-INF/services/javax.xml.stream.*",
+          "META-INF/maven/**",
+        )
+        // POI ships duplicate `mozilla/public-suffix-list.txt` and similar
+        // text resources across its OOXML jar split; pick the first one.
+        pickFirsts += listOf(
+          "mozilla/public-suffix-list.txt",
+          "draftv3/schema",
+          "draftv4/schema",
+        )
       }
     }
 
@@ -222,4 +248,37 @@ dependencies {
   implementation(libs.commonmark.ext.autolink)
   implementation(libs.commonmark.ext.footnotes)
   implementation(libs.commonmark.ext.image.attributes)
+
+  // Phase I/J — Apache POI for the OOXML pair (DOCX + XLSX). Apache-2.0.
+  //
+  // The StAX implementation Android does NOT ship (`javax.xml.stream.*`
+  // factories) is provided by `com.fasterxml:aalto-xml`. POI 5.x respects
+  // three `org.apache.poi.javax.xml.stream.*` system properties when
+  // looking up factories, so we wire those in PageboyApplication.onCreate()
+  // before any POI class loads.
+  //
+  // xlsx-streamer (the actively-maintained pjfanning fork of monitorjbl's
+  // excel-streaming-reader) is layered on top of POI for windowed-row
+  // reading on large workbooks. We exclude its `org.apache.poi` transitive
+  // so it picks up our pinned POI 5.5.1 rather than its own (likely older)
+  // pin.
+  //
+  // Several POI transitives are excluded — `log4j-api` (Android ships
+  // SLF4J via androidx; POI logs are noisy and we don't pipe them
+  // anywhere), `xml-apis` (Android's stripped runtime owns the
+  // `org.w3c.dom.*` + `org.xml.sax.*` namespaces; pulling another copy
+  // causes dex collisions).
+  implementation(libs.poi.ooxml) {
+    exclude(group = "org.apache.logging.log4j")
+    exclude(group = "xml-apis")
+  }
+  implementation(libs.poi.scratchpad) {
+    exclude(group = "org.apache.logging.log4j")
+    exclude(group = "xml-apis")
+  }
+  implementation(libs.aalto.xml)
+  implementation(libs.xlsx.streamer) {
+    exclude(group = "org.apache.logging.log4j")
+    exclude(group = "xml-apis")
+  }
 }
