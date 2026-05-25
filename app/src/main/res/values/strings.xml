@@ -229,7 +229,7 @@
     <!-- Setup wizard. -->
     <string name="setup_wizard_prompt">How should pageboy find your documents?</string>
     <string name="setup_wizard_all_files_title">Scan all files</string>
-    <string name="setup_wizard_all_files_desc">Scan Documents, Downloads, and Books folders for supported files.</string>
+    <string name="setup_wizard_all_files_desc">Find all documents on your device. You\'ll be asked to grant file access.</string>
     <string name="setup_wizard_pick_folders_title">Pick folders</string>
     <string name="setup_wizard_pick_folders_desc">Choose specific folders for pageboy to scan.</string>
 

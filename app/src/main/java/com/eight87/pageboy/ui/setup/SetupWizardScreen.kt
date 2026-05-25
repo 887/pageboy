@@ -1,6 +1,10 @@
 package com.eight87.pageboy.ui.setup
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -25,15 +29,24 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.eight87.pageboy.R
 import com.eight87.pageboy.data.library.DocumentSourceMode
 import com.eight87.pageboy.data.library.FolderType
@@ -41,15 +54,6 @@ import com.eight87.pageboy.data.library.PersistedUriPermissionStore
 import com.eight87.pageboy.data.library.SetupSettings
 import kotlinx.coroutines.launch
 
-/**
- * First-launch setup wizard. Presents two cards:
- *  1. "Scan all files" — requests `MANAGE_EXTERNAL_STORAGE` (Android 11+)
- *     or `READ_EXTERNAL_STORAGE` (older devices).
- *  2. "Pick folders" — launches the SAF tree picker.
- *
- * After either path completes, sets `setupComplete = true` and the
- * calling composable recomposes away from this screen.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupWizardScreen(
@@ -58,6 +62,8 @@ fun SetupWizardScreen(
   onSetupComplete: () -> Unit,
 ) {
   val scope = rememberCoroutineScope()
+  val context = LocalContext.current
+  var awaitingPermission by remember { mutableStateOf(false) }
 
   val completeAllFiles: () -> Unit = {
     scope.launch {
@@ -67,14 +73,11 @@ fun SetupWizardScreen(
     }
   }
 
-  val requestStorage = rememberLauncherForActivityResult(
+  // Pre-Android 11: simple runtime permission dialog.
+  val requestLegacyStorage = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.RequestPermission(),
   ) { granted ->
-    // On Android 12 and below: granted means we have READ_EXTERNAL_STORAGE.
-    // On Android 13+: the permission is dead and always returns false,
-    // but the FileSystemScanner can walk shared directories anyway.
-    // Either way, complete setup.
-    completeAllFiles()
+    if (granted) completeAllFiles()
   }
 
   val pickFolder = rememberLauncherForActivityResult(
@@ -86,6 +89,20 @@ fun SetupWizardScreen(
         setupSettings.documentSourceMode.set(DocumentSourceMode.FolderPicker)
         setupSettings.setupComplete.set(true)
         onSetupComplete()
+      }
+    }
+  }
+
+  // When returning from the Settings page, check if permission was granted.
+  val lifecycleOwner = LocalLifecycleOwner.current
+  LaunchedEffect(awaitingPermission) {
+    if (!awaitingPermission) return@LaunchedEffect
+    lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+        Environment.isExternalStorageManager()
+      ) {
+        awaitingPermission = false
+        completeAllFiles()
       }
     }
   }
@@ -126,16 +143,25 @@ fun SetupWizardScreen(
 
     Spacer(Modifier.height(32.dp))
 
-    // Card 1: Scan all files
     Card(
       onClick = {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-          // Android 13+: READ_EXTERNAL_STORAGE is dead for non-media.
-          // Skip the permission dance — FileSystemScanner walks shared
-          // directories (Documents/Download/Books) directly.
-          completeAllFiles()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+          if (Environment.isExternalStorageManager()) {
+            completeAllFiles()
+          } else {
+            val intent = try {
+              Intent(
+                Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                Uri.parse("package:${context.packageName}"),
+              )
+            } catch (_: Exception) {
+              Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+            }
+            awaitingPermission = true
+            context.startActivity(intent)
+          }
         } else {
-          requestStorage.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+          requestLegacyStorage.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
         }
       },
       colors = CardDefaults.cardColors(
@@ -174,7 +200,6 @@ fun SetupWizardScreen(
 
     Spacer(Modifier.height(16.dp))
 
-    // Card 2: Pick folders
     Card(
       onClick = { pickFolder.launch(null) },
       colors = CardDefaults.cardColors(

@@ -3,16 +3,18 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-      Setup wizard "scan all files" path uses READ_EXTERNAL_STORAGE
-      (simple runtime permission dialog, same pattern as tonearmboy's
-      READ_MEDIA_AUDIO). On Android 13+ this permission is a no-op for
-      non-media files, but the FileSystemScanner can still walk
-      Documents/Download/Books via java.io.File because those are
-      shared-storage directories accessible to all apps.
+      "Scan all files" needs MANAGE_EXTERNAL_STORAGE on Android 11+.
+      There is no READ_MEDIA_DOCUMENTS — Android left that gap. This
+      is the same permission Google Files uses. Play Store review
+      doesn't apply (sideload via Obtainium).
+      Pre-Android 11: READ_EXTERNAL_STORAGE (simple runtime dialog).
     -->
     <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+    <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+        android:maxSdkVersion="29" />
 
     <application
         android:name=".PageboyApplication"
