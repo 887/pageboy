@@ -1,10 +1,5 @@
 package com.eight87.pageboy.ui.setup
 
-import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.os.Environment
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -29,24 +24,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import com.eight87.pageboy.R
 import com.eight87.pageboy.data.library.DocumentSourceMode
 import com.eight87.pageboy.data.library.FolderType
@@ -71,29 +57,8 @@ fun SetupWizardScreen(
   onSetupComplete: () -> Unit,
 ) {
   val scope = rememberCoroutineScope()
-  val context = LocalContext.current
 
-  // Track whether we've launched the all-files settings and are waiting
-  // for the user to come back.
-  var awaitingAllFilesPermission by remember { mutableStateOf(false) }
-  var pendingFolderUri by remember { mutableStateOf<Uri?>(null) }
-
-  // SAF folder picker launcher (reuse the same pattern as LibraryFoldersScreen).
-  val pickFolder = rememberLauncherForActivityResult(
-    contract = ActivityResultContracts.OpenDocumentTree(),
-  ) { uri ->
-    if (uri != null) {
-      scope.launch {
-        persistedUriPermissionStore.addRoot(uri, FolderType.Root)
-        setupSettings.documentSourceMode.set(DocumentSourceMode.FolderPicker)
-        setupSettings.setupComplete.set(true)
-        onSetupComplete()
-      }
-    }
-  }
-
-  // Legacy storage permission launcher for pre-Android 11.
-  val requestLegacyStorage = rememberLauncherForActivityResult(
+  val requestStorage = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.RequestPermission(),
   ) { granted ->
     if (granted) {
@@ -105,16 +70,13 @@ fun SetupWizardScreen(
     }
   }
 
-  // When returning from the all-files settings screen, check permission.
-  val lifecycleOwner = LocalLifecycleOwner.current
-  LaunchedEffect(awaitingAllFilesPermission) {
-    if (!awaitingAllFilesPermission) return@LaunchedEffect
-    lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-        Environment.isExternalStorageManager()
-      ) {
-        awaitingAllFilesPermission = false
-        setupSettings.documentSourceMode.set(DocumentSourceMode.AllFiles)
+  val pickFolder = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.OpenDocumentTree(),
+  ) { uri ->
+    if (uri != null) {
+      scope.launch {
+        persistedUriPermissionStore.addRoot(uri, FolderType.Root)
+        setupSettings.documentSourceMode.set(DocumentSourceMode.FolderPicker)
         setupSettings.setupComplete.set(true)
         onSetupComplete()
       }
@@ -160,18 +122,7 @@ fun SetupWizardScreen(
     // Card 1: Scan all files
     Card(
       onClick = {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-          // Android 11+ — launch the system settings for all-files access.
-          val intent = Intent(
-            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-            Uri.parse("package:${context.packageName}"),
-          )
-          awaitingAllFilesPermission = true
-          context.startActivity(intent)
-        } else {
-          // Pre-Android 11 — request READ_EXTERNAL_STORAGE.
-          requestLegacyStorage.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
-        }
+        requestStorage.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
       },
       colors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,

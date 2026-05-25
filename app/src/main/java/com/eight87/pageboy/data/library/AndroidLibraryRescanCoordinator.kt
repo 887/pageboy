@@ -90,12 +90,6 @@ class AndroidLibraryRescanCoordinator(
 
   private suspend fun runScan() {
     val roots = rootStore.observeRoots().first()
-    if (roots.isEmpty()) {
-      // Nothing to do; still emit an empty state so the UI can stop
-      // showing a stale Scanning banner if any callers left one up.
-      _state.value = ScanState.Idle
-      return
-    }
     _state.value = ScanState.Scanning()
     val priorIds = writer.allDocumentIds()
     val snapshot = scanner.scan(roots) { documentsFound, currentFolder ->
@@ -104,7 +98,16 @@ class AndroidLibraryRescanCoordinator(
         currentFolder = currentFolder,
       )
     }
-    writer.applyScan(snapshot, touchedRoots = roots.map { it.treeUri.toString() }.toSet())
+    if (snapshot.documents.isEmpty() && roots.isEmpty()) {
+      _state.value = ScanState.Idle
+      return
+    }
+    val touchedRoots = if (roots.isNotEmpty()) {
+      roots.map { it.treeUri.toString() }.toSet()
+    } else {
+      snapshot.documents.map { it.treeUriString }.toSet()
+    }
+    writer.applyScan(snapshot, touchedRoots = touchedRoots)
     val seenIds = snapshot.documents.map { it.documentId }.toSet()
     val newCount = (seenIds - priorIds).size
     _state.value = ScanState.Idle

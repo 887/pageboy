@@ -3,17 +3,16 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-      Setup wizard offers two paths:
-        1. SAF-only (folder picker) — no extra permissions needed.
-        2. All-files access — needs MANAGE_EXTERNAL_STORAGE (Android 11+)
-           or READ_EXTERNAL_STORAGE (older devices).
+      Setup wizard "scan all files" path uses READ_EXTERNAL_STORAGE
+      (simple runtime permission dialog, same pattern as tonearmboy's
+      READ_MEDIA_AUDIO). On Android 13+ this permission is a no-op for
+      non-media files, but the FileSystemScanner can still walk
+      Documents/Download/Books via java.io.File because those are
+      shared-storage directories accessible to all apps.
     -->
     <uses-permission
-        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
-        tools:ignore="ScopedStorage" />
-    <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="29" />
+        android:maxSdkVersion="32" />
 
     <application
         android:name=".PageboyApplication"
