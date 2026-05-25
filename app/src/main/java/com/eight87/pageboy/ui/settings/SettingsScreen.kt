@@ -23,6 +23,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.eight87.pageboy.R
 import com.eight87.pageboy.data.settings.ReaderSettings
+import com.eight87.pageboy.data.settings.BaseThemeChoice
 import com.eight87.pageboy.data.settings.ThemeMode
 import com.eight87.pageboy.data.settings.ThemeSettings
 import com.eight87.pageboy.data.signing.DefaultKeySource
@@ -65,8 +66,8 @@ fun SettingsScreen(
   // Theme settings
   val themeMode by (themeSettings?.themeMode?.flow
     ?: kotlinx.coroutines.flow.flowOf(ThemeMode.System)).collectAsState(initial = ThemeMode.System)
-  val dynamicColorEnabled by (themeSettings?.dynamicColor?.flow
-    ?: kotlinx.coroutines.flow.flowOf(true)).collectAsState(initial = true)
+  val baseTheme by (themeSettings?.baseTheme?.flow
+    ?: kotlinx.coroutines.flow.flowOf(BaseThemeChoice.DefaultAndroid)).collectAsState(initial = BaseThemeChoice.DefaultAndroid)
   val seedColor by (themeSettings?.seedColor?.flow
     ?: kotlinx.coroutines.flow.flowOf(0L)).collectAsState(initial = 0L)
   // OpenWith settings
@@ -76,8 +77,9 @@ fun SettingsScreen(
     ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
   val openWithAutoClassify by (openWithSettings?.autoClassifyUnknownMime?.flow
     ?: kotlinx.coroutines.flow.flowOf(true)).collectAsState(initial = true)
-  // Dialog state for theme picker and color picker
+  // Dialog state for theme picker, base theme picker, and color picker
   var showThemeModePicker by remember { mutableStateOf(false) }
+  var showBaseThemePicker by remember { mutableStateOf(false) }
   var showColorPicker by remember { mutableStateOf(false) }
   Column(
     modifier = Modifier
@@ -116,7 +118,7 @@ fun SettingsScreen(
         }
       }
 
-    // Appearance section — theme mode + dynamic color + seed color.
+    // Appearance section — theme mode + base theme + seed color.
     if (themeSettings != null) {
       SettingsCatalog.bySection(Section.Appearance)
         .groupBy { it.group }
@@ -138,21 +140,22 @@ fun SettingsScreen(
                     onClick = { showThemeModePicker = true },
                   )
                 }
-                AppearanceCatalogIds.ID_DYNAMIC_COLOR -> {
-                  ToggleRow(
-                    entry = entry,
-                    checked = dynamicColorEnabled,
-                    onCheckedChange = { v ->
-                      scope.launch { themeSettings.dynamicColor.set(v) }
-                    },
-                    switchTestTag = "settings_appearance_dynamic_switch",
+                AppearanceCatalogIds.ID_BASE_THEME -> {
+                  val subtitle = baseThemeDisplayName(baseTheme)
+                  NavigateRow(
+                    entry = entry.copy(subtitle = subtitle),
+                    onClick = { showBaseThemePicker = true },
                   )
                 }
                 AppearanceCatalogIds.ID_SEED_COLOR -> {
-                  val subtitle = if (seedColor != 0L) "#%06X".format(seedColor) else "Brand default"
+                  // Seed color is only meaningful when base theme is Custom.
+                  val enabled = baseTheme == BaseThemeChoice.Custom
+                  val subtitle = if (!enabled) "Requires Custom base theme"
+                    else if (seedColor != 0L) "#%06X".format(seedColor)
+                    else "Brand default"
                   NavigateRow(
                     entry = entry.copy(subtitle = subtitle),
-                    onClick = { showColorPicker = true },
+                    onClick = { if (enabled) showColorPicker = true },
                   )
                 }
                 else -> NavigateRow(entry = entry, onClick = {})
@@ -351,12 +354,60 @@ fun SettingsScreen(
     )
   }
 
+  // Base theme picker dialog.
+  if (showBaseThemePicker && themeSettings != null) {
+    androidx.compose.material3.AlertDialog(
+      onDismissRequest = { showBaseThemePicker = false },
+      title = { Text(stringResource(R.string.settings_appearance_base_theme_label)) },
+      text = {
+        Column {
+          BaseThemeChoice.entries.forEach { choice ->
+            val label = baseThemeDisplayName(choice)
+            androidx.compose.material3.TextButton(
+              onClick = {
+                scope.launch {
+                  themeSettings.baseTheme.set(choice)
+                  // Sync legacy dynamic color flag for backward compat.
+                  themeSettings.dynamicColor.set(choice == BaseThemeChoice.DefaultAndroid)
+                }
+                showBaseThemePicker = false
+                // When switching to Custom, open the color picker if no
+                // seed has been picked yet.
+                if (choice == BaseThemeChoice.Custom && seedColor == 0L) {
+                  showColorPicker = true
+                }
+              },
+              modifier = Modifier.semantics { testTag = "base_theme_${choice.name}" },
+            ) {
+              Text(
+                text = if (choice == baseTheme) "$label (selected)" else label,
+                style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+              )
+            }
+          }
+        }
+      },
+      confirmButton = {
+        androidx.compose.material3.TextButton(onClick = { showBaseThemePicker = false }) {
+          Text(stringResource(R.string.dialog_cancel))
+        }
+      },
+    )
+  }
+
   // Color picker dialog.
   if (showColorPicker && themeSettings != null) {
     ColorPickerDialog(
       initialRgb = seedColor,
       onConfirm = { rgb ->
-        scope.launch { themeSettings.seedColor.set(rgb) }
+        scope.launch {
+          themeSettings.seedColor.set(rgb)
+          // Selecting a color implies Custom base theme.
+          if (baseTheme != BaseThemeChoice.Custom) {
+            themeSettings.baseTheme.set(BaseThemeChoice.Custom)
+            themeSettings.dynamicColor.set(false)
+          }
+        }
         showColorPicker = false
       },
       onDismiss = { showColorPicker = false },
@@ -366,4 +417,12 @@ fun SettingsScreen(
       },
     )
   }
+}
+
+/** User-facing display name for a [BaseThemeChoice] variant. */
+private fun baseThemeDisplayName(choice: BaseThemeChoice): String = when (choice) {
+  BaseThemeChoice.DefaultAndroid -> "Dynamic (Material You)"
+  BaseThemeChoice.DefaultColors -> "Brand palette"
+  BaseThemeChoice.PureBlack -> "Pure black (AMOLED)"
+  BaseThemeChoice.Custom -> "Custom seed color"
 }

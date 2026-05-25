@@ -1,6 +1,6 @@
 # pageboy — UI parity sweep vs tonearmboy
 
-## Status: 🔴 PLAN — sweep complete 2026-05-25, fix implementation pending user review.
+## Status: 🟢 IMPLEMENTED — Rounds 1-4 landed 2026-05-25. P3.2 (view modes), P3.6 (tile grid), P3.8 (multi-select) deferred.
 
 Four parallel sweep agents compared tonearmboy's shipped UI against pageboy's shipped UI. The user tested on a real phone and the gaps are severe. This plan enumerates every difference, grouped by priority.
 
@@ -80,10 +80,24 @@ Four parallel sweep agents compared tonearmboy's shipped UI against pageboy's sh
 - P2.1-P2.6: replace M3 NavigationRail with custom LibraryRail matching tonearmboy's exact pattern
 
 **Round 3 (Feature surface parity):**
-- P3.1-P3.10: view modes, filter/sort bottom sheets, section headers, tile grid, multi-select
+- [x] **P3.1** Top bar actions: added View Mode + Filter (with badge) icons to TopAppBar alongside existing Search + Sort + Settings
+- [ ] **P3.2** View modes: Tile + TwoColumn rendering (skipped this round -- icon infrastructure only)
+- [x] **P3.3** Filter UI: created LibraryFilterSheet.kt (ModalBottomSheet with format + collection checkboxes, Reset/Apply); replaced inline LibraryFilterChipRow with filter icon + badge in TopAppBar
+- [x] **P3.4** Sort UI: created LibrarySortSheet.kt (ModalBottomSheet with RadioButton per sort key, Cancel/OK); replaced inline DropdownMenu sort
+- [x] **P3.5** Section headers: created SectionHeader.kt (rounded surface chip, surfaceContainerHigh, labelLarge); wired into LibraryDocumentList with sectionKey() grouping by Format or first letter
+- [ ] **P3.6** Tile grid cards (skipped -- depends on P3.2)
+- [x] **P3.7** List row styling: rewrote DocumentCard to match tonearmboy Row pattern (16dp h / 10dp v padding, 48dp icon with 4dp corners, 12dp spacer, titleSmall maxLines=1, bodySmall maxLines=1, MoreVert, HorizontalDivider between rows)
+- [ ] **P3.8** Multi-select (skipped -- large feature for separate round)
+- [x] **P3.9** Empty state: fixed to Box(fillMaxSize, padding=32.dp) with plain bodyMedium text, centered (removed Card wrapper)
+- [x] **P3.10** Scan progress banner: rewrote to Surface(tonalElevation=2.dp) with AnimatedVisibility(fadeIn+expandVertically), Row with count + LinearProgressIndicator
 
 **Round 4 (Theme polish):**
-- P4.1-P4.6: BaseTheme sealed variants, surface blending, color picker quality, default theme
+- [x] **P4.1** Add `BaseThemeChoice` enum (DefaultAndroid/DefaultColors/PureBlack/Custom) to ThemeSettings.kt + `baseTheme` EnumSetting
+- [x] **P4.2** Wire `BaseThemeChoice` through Theme.kt `resolveColorScheme` -- four-way dispatch matching tonearmboy's `resolveBaseScheme`
+- [x] **P4.3** Surface blending -- verified: `blendSurface` exists; `deriveCustomScheme` generates full surface container ladder for Custom; pageboy has no album art so no external tint blending needed
+- [x] **P4.4** Color picker quality -- verified: HSV square + hue slider + preview swatch + hex readout + Cancel/Reset/OK all present and matching tonearmboy's pattern
+- [x] **P4.5** Appearance entries updated: replaced Dynamic Color toggle with Base Theme picker; Seed Color row only active when baseTheme == Custom; base theme picker dialog added to SettingsScreen
+- [x] **P4.6** Default theme: `BaseThemeChoice.DefaultAndroid` is the default -- dynamic color ON on first install for API 31+, brand palette below
 
 ## Files that need changes
 

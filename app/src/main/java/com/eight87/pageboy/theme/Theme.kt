@@ -14,6 +14,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.eight87.pageboy.data.settings.BaseThemeChoice
 import com.eight87.pageboy.data.settings.ThemeMode
 
 // m3-expressive.md gotcha #1 — `material3:1.4.0` keeps the expressive
@@ -34,19 +35,24 @@ internal val LightColorScheme = expressiveLightColorScheme()
  * Pageboy's theme entry point. Wraps content in
  * [MaterialExpressiveTheme] (the M3E wrapper introduced by Material 3 1.5.0).
  *
- * Close-out enhancement: reads [themeMode], [dynamicColor], and
- * [seedColorRgb] from the ThemeSettings facet so every surface gets
- * the user's chosen tint when a seed is picked.
+ * The color scheme is determined by [baseTheme]:
  *
- * When [seedColorRgb] is non-zero and [dynamicColor] is false, the
- * full M3 color scheme is derived from the seed using HSL-shift
- * generation (same pattern tonearmboy uses). All `surfaceContainer*`
- * rungs are auto-derived from the seed so cards / settings rows / the
- * nav rail all tint consistently.
+ *  - [BaseThemeChoice.DefaultAndroid] -- Material You / dynamic colour
+ *    on API 31+, falls back to the brand palette on older devices.
+ *  - [BaseThemeChoice.DefaultColors] -- the static brand palette
+ *    regardless of API.
+ *  - [BaseThemeChoice.PureBlack] -- same primary colours as
+ *    DefaultAndroid but with `surface` / `background` collapsed to
+ *    pure black for AMOLED-friendly displays.
+ *  - [BaseThemeChoice.Custom] -- HSL-derived palette from [seedColorRgb].
+ *
+ * Legacy [dynamicColor] param is kept for backward compat but defers
+ * to [baseTheme] when the caller provides it.
  */
 @Composable
 fun PageboyTheme(
   themeMode: ThemeMode = ThemeMode.System,
+  baseTheme: BaseThemeChoice = BaseThemeChoice.DefaultAndroid,
   dynamicColor: Boolean = true,
   seedColorRgb: Long = 0L,
   content: @Composable () -> Unit,
@@ -57,34 +63,53 @@ fun PageboyTheme(
     ThemeMode.System -> isSystemInDarkTheme()
   }
 
-  val colorScheme = resolveColorScheme(darkTheme, dynamicColor, seedColorRgb)
+  val colorScheme = resolveColorScheme(darkTheme, baseTheme, seedColorRgb)
 
   MaterialExpressiveTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }
 
 /**
- * Resolve the [ColorScheme] from the user's three settings knobs.
+ * Resolve the foundation [ColorScheme] for the active [BaseThemeChoice].
  *
- * Priority:
- *  1. Dynamic color on + API 31+ -> wallpaper-derived scheme.
- *  2. Seed color non-zero -> HSL-derived custom scheme.
- *  3. Fallback -> brand palette (expressiveLightColorScheme / darkColorScheme).
+ * Mirrors tonearmboy's `resolveBaseScheme` -- four-way dispatch:
+ *  - DefaultAndroid: dynamic on API 31+, brand palette below.
+ *  - DefaultColors: brand palette always (no dynamic).
+ *  - PureBlack: same as DefaultAndroid but surface + background = Black.
+ *  - Custom: HSL-derived from [seedColorRgb].
  */
 @Composable
 internal fun resolveColorScheme(
   darkTheme: Boolean,
-  dynamicColor: Boolean,
+  baseTheme: BaseThemeChoice,
   seedColorRgb: Long,
 ): ColorScheme {
   val dynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
-  return when {
-    dynamicColor && dynamicAvailable -> {
-      val context = LocalContext.current
-      if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+  return when (baseTheme) {
+    BaseThemeChoice.DefaultAndroid -> {
+      if (dynamicAvailable) {
+        val context = LocalContext.current
+        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+      } else {
+        if (darkTheme) DarkColorScheme else LightColorScheme
+      }
     }
-    seedColorRgb != 0L -> deriveCustomScheme(seedColorRgb, darkTheme)
-    else -> if (darkTheme) DarkColorScheme else LightColorScheme
+    BaseThemeChoice.DefaultColors -> {
+      if (darkTheme) DarkColorScheme else LightColorScheme
+    }
+    BaseThemeChoice.PureBlack -> {
+      val foundation = if (dynamicAvailable) {
+        val context = LocalContext.current
+        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+      } else {
+        if (darkTheme) DarkColorScheme else LightColorScheme
+      }
+      foundation.copy(background = Color.Black, surface = Color.Black)
+    }
+    BaseThemeChoice.Custom -> {
+      if (seedColorRgb != 0L) deriveCustomScheme(seedColorRgb, darkTheme)
+      else if (darkTheme) DarkColorScheme else LightColorScheme
+    }
   }
 }
 
@@ -189,3 +214,14 @@ internal fun hslColor(hue: Float, saturation: Float, lightness: Float): Color {
 
 internal fun luminance(c: Color): Float =
   0.2126f * c.red + 0.7152f * c.green + 0.0722f * c.blue
+
+internal fun blendSurface(base: Color, tint: Color?, fraction: Float = 0.4f): Color {
+  if (tint == null) return base
+  val f = fraction.coerceIn(0f, 1f)
+  return Color(
+    red = base.red * (1f - f) + tint.red * f,
+    green = base.green * (1f - f) + tint.green * f,
+    blue = base.blue * (1f - f) + tint.blue * f,
+    alpha = base.alpha,
+  )
+}

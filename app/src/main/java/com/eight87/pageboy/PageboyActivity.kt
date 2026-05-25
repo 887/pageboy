@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import com.eight87.pageboy.data.settings.BaseThemeChoice
 import com.eight87.pageboy.data.settings.ThemeMode
 import com.eight87.pageboy.theme.PageboyTheme
 import com.eight87.pageboy.ui.PageboyApp
@@ -35,16 +36,16 @@ class PageboyActivity : ComponentActivity() {
       val themeMode by (appGraph?.themeSettings?.themeMode?.flow
         ?: kotlinx.coroutines.flow.flowOf(ThemeMode.System))
         .collectAsState(initial = ThemeMode.System)
-      val dynamicColor by (appGraph?.themeSettings?.dynamicColor?.flow
-        ?: kotlinx.coroutines.flow.flowOf(true))
-        .collectAsState(initial = true)
+      val baseTheme by (appGraph?.themeSettings?.baseTheme?.flow
+        ?: kotlinx.coroutines.flow.flowOf(BaseThemeChoice.DefaultAndroid))
+        .collectAsState(initial = BaseThemeChoice.DefaultAndroid)
       val seedColor by (appGraph?.themeSettings?.seedColor?.flow
         ?: kotlinx.coroutines.flow.flowOf(0L))
         .collectAsState(initial = 0L)
 
       PageboyTheme(
         themeMode = themeMode,
-        dynamicColor = dynamicColor,
+        baseTheme = baseTheme,
         seedColorRgb = seedColor,
       ) {
         Surface(
