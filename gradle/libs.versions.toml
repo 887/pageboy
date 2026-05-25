@@ -106,6 +106,8 @@ xlsxStreamer = "5.2.0"
 # see desugar block below.
 readium = "3.2.0"
 # 2.1.5+ required by Readium 3.2.0 AAR metadata gate.
+# Phase N — WorkManager for the ephemeral-cleanup daily job. Apache-2.0.
+workManager = "2.10.1"
 desugarJdkLibs = "2.1.5"
 # Phase H — PDF signing. OpenPDF (MPL-2.0 or LGPL-2.1+; we pick MPL-2.0
 # already on the family Licensee allowlist) is the PDF writer that
@@ -211,6 +213,10 @@ xlsx-streamer = { module = "com.github.pjfanning:excel-streaming-reader", versio
 # block above for the rationale. Each artifact listed explicitly so
 # Licensee inventories them + version drift triggers a diff against the
 # committed `app/src/main/assets/licenses/artifacts.json`.
+# Phase N — WorkManager runtime + testing.
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workManager" }
+androidx-work-testing = { module = "androidx.work:work-testing", version.ref = "workManager" }
+
 readium-shared = { module = "org.readium.kotlin-toolkit:readium-shared", version.ref = "readium" }
 readium-streamer = { module = "org.readium.kotlin-toolkit:readium-streamer", version.ref = "readium" }
 readium-navigator = { module = "org.readium.kotlin-toolkit:readium-navigator", version.ref = "readium" }

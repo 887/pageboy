@@ -60,6 +60,8 @@ internal fun ReaderTopBar(
   onOpenToc: () -> Unit = {},
   showSignAction: Boolean = false,
   onSign: () -> Unit = {},
+  showExportAnnotations: Boolean = false,
+  onExportAnnotations: () -> Unit = {},
 ) {
   var overflowOpen by remember { mutableStateOf(false) }
   TopAppBar(
@@ -150,8 +152,19 @@ internal fun ReaderTopBar(
             modifier = Modifier.semantics { testTag = "reader_overflow_sign" },
           )
         }
+        // Phase G — export with annotations entry (PDF only).
+        if (showExportAnnotations) {
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.reader_overflow_export_annotations_label)) },
+            onClick = {
+              overflowOpen = false
+              onExportAnnotations()
+            },
+            modifier = Modifier.semantics { testTag = "reader_overflow_export_annotations" },
+          )
+        }
         // Phase C placeholder — kept for formats with no actions in v1.
-        if (!tocAvailable && !showSignAction) {
+        if (!tocAvailable && !showSignAction && !showExportAnnotations) {
           DropdownMenuItem(
             text = { Text(stringResource(R.string.reader_overflow_empty_label)) },
             onClick = { overflowOpen = false },

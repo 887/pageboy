@@ -386,4 +386,8 @@ dependencies {
   implementation(libs.openpdf.core)
   implementation(libs.bouncycastle.prov)
   implementation(libs.bouncycastle.pkix)
+
+  // Phase N — WorkManager for the ephemeral-cleanup daily job.
+  implementation(libs.androidx.work.runtime.ktx)
+  testImplementation(libs.androidx.work.testing)
 }

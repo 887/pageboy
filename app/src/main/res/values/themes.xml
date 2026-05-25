@@ -6,5 +6,10 @@
       Android theme is only the bootstrap surface the window opens
       onto.
     -->
-    <style name="Theme.Pageboy" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Pageboy" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Close-out — Android 12+ splash screen icon with dp-inset
+             shrink so the ferret inscribes inside the system circle
+             (m3-expressive.md gotcha #4). -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+    </style>
 </resources>

@@ -4,6 +4,8 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.eight87.pageboy.data.library.DocumentSourceCodec
+import com.eight87.pageboy.data.library.DocumentSourceKind
 
 /**
  * Phase B.1 — persisted row for a single document found in one of the
@@ -101,4 +103,26 @@ data class DocumentEntity(
    * explicitly removes a root, which is owned by the repository.
    */
   @ColumnInfo(name = "is_missing") val isMissing: Boolean = false,
-)
+
+  /**
+   * Phase N.5 — JSON-encoded [DocumentSourceKind] sealed variant. Null
+   * for rows scanned by Phase B before Phase N landed; the migration
+   * (v3 → v4) leaves the column nullable + treats null as
+   * `LibraryRoot(treeUriString)` for backward-compatible reads
+   * ([toSourceKind] below). New rows ALWAYS write a value: either
+   * `LibraryRoot(rootTreeUriString)` for scanned docs or
+   * `AdHocOpen(uri, ephemeral)` for documents created by
+   * `OpenWithActivity` ingest.
+   */
+  @ColumnInfo(name = "source_json") val sourceJson: String? = null,
+) {
+  /**
+   * Phase N — decode the JSON-encoded source kind for this row. Treats a
+   * null/empty column as the implicit `LibraryRoot(treeUriString)`
+   * fallback so v1/v2/v3 rows continue to read cleanly without a
+   * one-shot backfill.
+   */
+  fun toSourceKind(): DocumentSourceKind =
+    DocumentSourceCodec.decode(sourceJson)
+      ?: DocumentSourceKind.LibraryRoot(rootTreeUriString = treeUriString)
+}

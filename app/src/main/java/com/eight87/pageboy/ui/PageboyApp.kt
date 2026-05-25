@@ -222,11 +222,9 @@ fun PageboyApp(
             onLibraryFolders = { backStack.add(SettingsLibraryFoldersRoute) },
             onRescanNow = { effectiveCoordinator?.requestRescan() },
             readerSettings = appGraph?.readerSettings,
+            themeSettings = appGraph?.themeSettings,
             signingSettings = appGraph?.signingSettings,
-            // Phase H.6 — "Manage" and "Reset" sub-screens land when
-            // the multi-identity story justifies a dedicated sub-page;
-            // v1's data layer + Keystore APIs already support the
-            // operations, the chrome routes are just deferred.
+            openWithSettings = appGraph?.openWithSettings,
             onManageSigningKeys = { /* TODO Phase H.6 sub-screen */ },
             onResetSigningKeys = { /* TODO Phase H.6 confirmation dialog */ },
           )

@@ -182,6 +182,34 @@
     <string name="settings_signing_default_keystore">Device key (EC P-256)</string>
     <string name="settings_signing_default_ask">Ask each time</string>
 
+    <!-- Close-out — Appearance settings section. -->
+    <string name="settings_group_appearance">Appearance</string>
+    <string name="settings_appearance_theme_mode_label">Theme</string>
+    <string name="settings_appearance_theme_mode_subtitle">Light, Dark, or follow the system.</string>
+    <string name="settings_appearance_dynamic_color_label">Dynamic color</string>
+    <string name="settings_appearance_dynamic_color_subtitle">Use wallpaper-derived colors (Android 12+).</string>
+    <string name="settings_appearance_seed_color_label">Seed color</string>
+    <string name="settings_appearance_seed_color_subtitle">Pick a base color for the app palette.</string>
+    <string name="settings_color_picker_title">Pick a color</string>
+    <string name="settings_color_picker_reset">Reset</string>
+    <string name="settings_dialog_confirm">OK</string>
+    <string name="settings_dialog_cancel">Cancel</string>
+
+    <!-- Phase G — annotation overflow entry. -->
+    <string name="reader_overflow_export_annotations_label">Export with annotations…</string>
+
+    <!-- Phase N — Open with. -->
+    <string name="settings_group_open_with">Open with</string>
+    <string name="settings_open_with_retention_label">Ephemeral retention</string>
+    <string name="settings_open_with_retention_subtitle">Days to keep ad-hoc opens before cleanup.</string>
+    <string name="settings_open_with_save_default_label">Save to library by default</string>
+    <string name="settings_open_with_save_default_subtitle">Skip the Keep prompt for ad-hoc documents.</string>
+    <string name="settings_open_with_auto_classify_label">Auto-classify unknown MIME</string>
+    <string name="settings_open_with_auto_classify_subtitle">Sniff bytes when the sender mis-declares the file type.</string>
+    <string name="open_with_unknown_format">Pageboy cannot open this file type: %1$s</string>
+    <string name="open_with_permission_refused">Cannot read this file — permission denied.</string>
+    <string name="open_with_failure">Could not open this file.</string>
+
     <!-- About → build-version easter egg (triple-tap reveals the ferret). -->
     <string name="settings_about_easter_egg_first">Tap 2 more times for a treat</string>
     <string name="settings_about_easter_egg_second">Tap 1 more time…</string>

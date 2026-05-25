@@ -190,6 +190,34 @@
                 <data android:pathPattern=".*\\.prc" />
             </intent-filter>
         </activity>
+        <!-- Phase N — open-with activity. Exported + intent-filter-only
+             (no launcher entry). Routes ACTION_VIEW intents from file
+             managers / share sheets into the reader via OpenWithResolver. -->
+        <activity
+            android:name=".openwith.OpenWithActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+
+            <!-- Catch-all for application/octet-stream + path patterns -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!-- application/zip catch-all (EPUB / DOCX / XLSX / ODT / ODS
+                 are all zip-based; some file managers send application/zip
+                 instead of the canonical MIME). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/zip" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Close-out — splash icon drawable that pre-shrinks the app icon to
+  ~60% using dp insets. Android 12+'s SplashScreen hard circle-clips
+  the icon at 240dp; without the inset padding the corners graze the
+  mask (m3-expressive.md gotcha #4). 48dp inset on each side of a
+  240dp icon area ≈ 60% visible, giving proper headroom inside the
+  system circle.
+
+  This wraps the existing launcher mipmap so no duplicate asset is
+  needed — when the user provides a custom launcher icon the splash
+  picks it up automatically.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@mipmap/ic_launcher"
+    android:insetLeft="48dp"
+    android:insetTop="48dp"
+    android:insetRight="48dp"
+    android:insetBottom="48dp" />
