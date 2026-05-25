@@ -1,5 +1,6 @@
 package com.eight87.pageboy.ui.setup
 
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -58,16 +59,22 @@ fun SetupWizardScreen(
 ) {
   val scope = rememberCoroutineScope()
 
+  val completeAllFiles: () -> Unit = {
+    scope.launch {
+      setupSettings.documentSourceMode.set(DocumentSourceMode.AllFiles)
+      setupSettings.setupComplete.set(true)
+      onSetupComplete()
+    }
+  }
+
   val requestStorage = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.RequestPermission(),
   ) { granted ->
-    if (granted) {
-      scope.launch {
-        setupSettings.documentSourceMode.set(DocumentSourceMode.AllFiles)
-        setupSettings.setupComplete.set(true)
-        onSetupComplete()
-      }
-    }
+    // On Android 12 and below: granted means we have READ_EXTERNAL_STORAGE.
+    // On Android 13+: the permission is dead and always returns false,
+    // but the FileSystemScanner can walk shared directories anyway.
+    // Either way, complete setup.
+    completeAllFiles()
   }
 
   val pickFolder = rememberLauncherForActivityResult(
@@ -122,7 +129,14 @@ fun SetupWizardScreen(
     // Card 1: Scan all files
     Card(
       onClick = {
-        requestStorage.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+          // Android 13+: READ_EXTERNAL_STORAGE is dead for non-media.
+          // Skip the permission dance — FileSystemScanner walks shared
+          // directories (Documents/Download/Books) directly.
+          completeAllFiles()
+        } else {
+          requestStorage.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
       },
       colors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
