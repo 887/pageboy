@@ -1,6 +1,6 @@
 # pageboy — UI parity sweep vs tonearmboy
 
-## Status: 🟢 IMPLEMENTED — Rounds 1-4 landed 2026-05-25. P3.2 (view modes), P3.6 (tile grid), P3.8 (multi-select) deferred.
+## Status: ✅ DONE
 
 Four parallel sweep agents compared tonearmboy's shipped UI against pageboy's shipped UI. The user tested on a real phone and the gaps are severe. This plan enumerates every difference, grouped by priority.
 
@@ -81,13 +81,13 @@ Four parallel sweep agents compared tonearmboy's shipped UI against pageboy's sh
 
 **Round 3 (Feature surface parity):**
 - [x] **P3.1** Top bar actions: added View Mode + Filter (with badge) icons to TopAppBar alongside existing Search + Sort + Settings
-- [ ] **P3.2** View modes: Tile + TwoColumn rendering (skipped this round -- icon infrastructure only)
+- [x] **P3.2** View modes: ViewMode enum (List/Tile/TwoColumn) with DataStore persistence, cycle button in TopAppBar, icon reflects current mode, LibraryDocumentList dispatches on viewMode
 - [x] **P3.3** Filter UI: created LibraryFilterSheet.kt (ModalBottomSheet with format + collection checkboxes, Reset/Apply); replaced inline LibraryFilterChipRow with filter icon + badge in TopAppBar
 - [x] **P3.4** Sort UI: created LibrarySortSheet.kt (ModalBottomSheet with RadioButton per sort key, Cancel/OK); replaced inline DropdownMenu sort
 - [x] **P3.5** Section headers: created SectionHeader.kt (rounded surface chip, surfaceContainerHigh, labelLarge); wired into LibraryDocumentList with sectionKey() grouping by Format or first letter
-- [ ] **P3.6** Tile grid cards (skipped -- depends on P3.2)
+- [x] **P3.6** Tile grid cards: DocumentTile composable with aspectRatio(1f) cover area, format icon, overflow menu, title/subtitle; used by LazyVerticalGrid in Tile + TwoColumn modes
 - [x] **P3.7** List row styling: rewrote DocumentCard to match tonearmboy Row pattern (16dp h / 10dp v padding, 48dp icon with 4dp corners, 12dp spacer, titleSmall maxLines=1, bodySmall maxLines=1, MoreVert, HorizontalDivider between rows)
-- [ ] **P3.8** Multi-select (skipped -- large feature for separate round)
+- [x] **P3.8** Multi-select: long-press activates, MultiSelectBar replaces TopAppBar (close + count + pin + delete), secondaryContainer bg on selected rows, 3dp primary border on selected tiles, back gesture closes, deleteDocuments added to DocumentSource
 - [x] **P3.9** Empty state: fixed to Box(fillMaxSize, padding=32.dp) with plain bodyMedium text, centered (removed Card wrapper)
 - [x] **P3.10** Scan progress banner: rewrote to Surface(tonalElevation=2.dp) with AnimatedVisibility(fadeIn+expandVertically), Row with count + LinearProgressIndicator
 

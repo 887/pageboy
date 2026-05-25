@@ -1,6 +1,6 @@
 # pageboy — UI shell
 
-## Status: 🟡 PRESCRIBED — to be applied during main.md Phase A.3 + A.4 + A.5
+## Status: ✅ DONE — applied in Phase A (vertical rail, top bar, settings catalog DSL, AboutScreen, LicensesScreen all shipped)
 
 ## The rule
 

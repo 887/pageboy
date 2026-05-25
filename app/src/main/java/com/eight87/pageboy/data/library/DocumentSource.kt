@@ -32,6 +32,9 @@ interface DocumentSource {
    * call sites (and migration tests) keep compiling.
    */
   suspend fun setScrollPosition(id: String, positionJson: String?, fraction: Float)
+
+  /** Remove documents from the library by ID (does not delete the files on disk). */
+  suspend fun deleteDocuments(ids: Set<String>)
 }
 
 /**

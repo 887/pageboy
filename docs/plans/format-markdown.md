@@ -1,6 +1,6 @@
 # pageboy — Markdown renderer plan
 
-## Status: 🟡 RECOMMENDED — review pending
+## Status: ✅ DONE — Phase D shipped (commonmark-java 0.28.0 + hand-rolled Compose renderer in format/markdown/)
 
 ## Recommendation
 

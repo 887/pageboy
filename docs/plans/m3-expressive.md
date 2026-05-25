@@ -1,6 +1,6 @@
 # pageboy — Material 3 Expressive (M3E) starter
 
-## Status: 🟡 PRESCRIBED — apply during main.md Phase A.2
+## Status: ✅ DONE — applied in Phase A.2 (MaterialExpressiveTheme, surface tier ladder, coloured avatars, filled icons all shipped)
 
 ## Why this plan exists
 

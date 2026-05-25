@@ -1,6 +1,6 @@
 # pageboy — "Open with…" + filetype registration plan
 
-## Status: 🟡 PLANNED — Phase N implementation; intent-filter declarations shipped in Phase A.6.
+## Status: ✅ DONE — Phase N shipped (OpenWithActivity, OpenWithResolver, AdHocDocumentStore, OpenWithEphemeralCleanupWorker, manifest intent filters all in place)
 
 This plan covers what happens when the user taps a document file in any other Android app (file manager, email attachment, browser download, messaging app, cloud-storage app) and picks pageboy from the "Complete action using" chooser. The system intent flow is well-defined; the load-bearing work is the permission lifecycle, the ad-hoc `DocumentEntity` creation for "open-with" documents that aren't in any library root, and the recents-list integration.
 

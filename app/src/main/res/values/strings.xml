@@ -82,6 +82,12 @@
     <string name="library_scan_banner_in">in %1$s</string>
     <string name="library_scan_complete_snackbar">%1$d new document(s) found</string>
 
+    <!-- Multi-select bar. -->
+    <string name="multi_select_close_cd">Close selection</string>
+    <string name="multi_select_count">%1$d selected</string>
+    <string name="multi_select_pin_cd">Pin selected</string>
+    <string name="multi_select_delete_cd">Remove selected from library</string>
+
     <!-- Phase B — library folders management screen. -->
     <string name="library_folders_title">Source folders</string>
     <string name="library_folders_add">Add folder…</string>

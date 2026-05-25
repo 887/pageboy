@@ -1,6 +1,6 @@
 # pageboy — XLSX renderer plan
 
-## Status: 🟡 RECOMMENDED — review pending
+## Status: ✅ DONE — Phase J shipped (format/xlsx/ with XlsxRenderer, XlsxParser, XlsxBody)
 
 _Sibling plan: [`format-docx.md`](format-docx.md). The two share library landscape (Apache POI dominates OOXML); read the DOCX plan first for the POI-on-Android setup notes (StAX bootstrap, R8 keep-rules pattern, license-allowlist closure) — this file does not repeat them. A parallel ODS agent owns [`format-ods.md`](format-ods.md); the shared-plumbing opinion at the bottom of this file is the OOXML side's proposal._
 

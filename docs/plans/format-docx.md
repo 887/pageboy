@@ -1,6 +1,6 @@
 # pageboy — DOCX renderer plan
 
-## Status: 🟡 RECOMMENDED — review pending
+## Status: ✅ DONE — Phase I shipped (format/docx/ with DocxRenderer, RichTextBlocks, RichTextRuns)
 
 _Sibling plan: [`format-xlsx.md`](format-xlsx.md). The two share library landscape (Apache POI dominates OOXML) so they were researched together. A parallel ODT/ODS pair owns [`format-odt.md`](format-odt.md) + [`format-ods.md`](format-ods.md); the shared-plumbing opinion at the bottom of this file is the OOXML side's proposal — consolidation is later._
 

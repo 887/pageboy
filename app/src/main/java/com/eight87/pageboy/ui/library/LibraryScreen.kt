@@ -1,5 +1,6 @@
 package com.eight87.pageboy.ui.library
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,8 +10,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ViewColumn
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +46,7 @@ import com.eight87.pageboy.data.library.LibrarySortKey
 import com.eight87.pageboy.data.library.LibraryTab
 import com.eight87.pageboy.data.library.LibraryUiSettings
 import com.eight87.pageboy.data.library.ScanState
+import com.eight87.pageboy.data.library.ViewMode
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,6 +70,8 @@ fun LibraryScreen(
   val tab by libraryUiSettings.tab.collectAsStateWithLifecycle(initialValue = LibraryTab.All)
   val sortKey by libraryUiSettings.sortKey
     .collectAsStateWithLifecycle(initialValue = LibrarySortKey.TitleAsc)
+  val viewMode by libraryUiSettings.viewMode
+    .collectAsStateWithLifecycle(initialValue = ViewMode.List)
   val selectedFormats by libraryUiSettings.selectedFormats
     .collectAsStateWithLifecycle(initialValue = emptySet())
   val selectedCollections by libraryUiSettings.selectedCollections
@@ -79,6 +85,16 @@ fun LibraryScreen(
   var searchQuery by remember { mutableStateOf("") }
   var showSortSheet by remember { mutableStateOf(false) }
   var showFilterSheet by remember { mutableStateOf(false) }
+
+  // --- Multi-select state ---
+  var multiSelectActive by remember { mutableStateOf(false) }
+  var selectedIds by remember { mutableStateOf(emptySet<String>()) }
+
+  // Back gesture closes multi-select
+  BackHandler(enabled = multiSelectActive) {
+    multiSelectActive = false
+    selectedIds = emptySet()
+  }
 
   val filtersActive = selectedFormats.isNotEmpty() || selectedCollections.isNotEmpty()
 
@@ -142,9 +158,40 @@ fun LibraryScreen(
     )
   }
 
+  // Resolve the view mode icon for the current mode (shows the current mode).
+  val viewModeIcon = when (viewMode) {
+    ViewMode.List -> Icons.AutoMirrored.Filled.ViewList
+    ViewMode.Tile -> Icons.Filled.GridView
+    ViewMode.TwoColumn -> Icons.Filled.ViewColumn
+  }
+
   Box(modifier = modifier.fillMaxSize().semantics { testTag = "library_screen" }) {
     Column(modifier = Modifier.fillMaxSize()) {
-      if (searchMode) {
+      if (multiSelectActive) {
+        MultiSelectBar(
+          count = selectedIds.size,
+          onClose = {
+            multiSelectActive = false
+            selectedIds = emptySet()
+          },
+          onPinAll = {
+            scope.launch {
+              for (id in selectedIds) {
+                documentSource.setPinned(id, true)
+              }
+              multiSelectActive = false
+              selectedIds = emptySet()
+            }
+          },
+          onDeleteAll = {
+            scope.launch {
+              documentSource.deleteDocuments(selectedIds)
+              multiSelectActive = false
+              selectedIds = emptySet()
+            }
+          },
+        )
+      } else if (searchMode) {
         LibrarySearchBar(
           query = searchQuery,
           onQueryChange = { searchQuery = it },
@@ -172,15 +219,15 @@ fun LibraryScreen(
                 contentDescription = stringResource(R.string.library_sort_cd),
               )
             }
-            // View Mode icon — infrastructure for List/Tile/TwoColumn.
-            // Currently only List mode is implemented; the icon is present
-            // for parity with tonearmboy's 5-icon top bar.
+            // View Mode icon — cycles List → Tile → TwoColumn → List.
             IconButton(
-              onClick = { /* TODO P3.2: cycle view mode */ },
+              onClick = {
+                scope.launch { libraryUiSettings.setViewMode(viewMode.next()) }
+              },
               modifier = Modifier.semantics { testTag = "library_view_mode_button" },
             ) {
               Icon(
-                imageVector = Icons.AutoMirrored.Filled.ViewList,
+                imageVector = viewModeIcon,
                 contentDescription = stringResource(R.string.library_view_mode_cd),
               )
             }
@@ -227,7 +274,42 @@ fun LibraryScreen(
           LibraryDocumentList(
             documents = visibleDocs,
             sortKey = sortKey,
-            onTap = onDocumentTap,
+            viewMode = viewMode,
+            selectedIds = selectedIds,
+            multiSelectActive = multiSelectActive,
+            onTap = { doc ->
+              if (multiSelectActive) {
+                // Toggle selection
+                selectedIds = if (doc.documentId in selectedIds) {
+                  val updated = selectedIds - doc.documentId
+                  if (updated.isEmpty()) {
+                    multiSelectActive = false
+                  }
+                  updated
+                } else {
+                  selectedIds + doc.documentId
+                }
+              } else {
+                onDocumentTap(doc)
+              }
+            },
+            onLongPress = { doc ->
+              if (!multiSelectActive) {
+                multiSelectActive = true
+                selectedIds = setOf(doc.documentId)
+              } else {
+                // Toggle selection on long-press too
+                selectedIds = if (doc.documentId in selectedIds) {
+                  val updated = selectedIds - doc.documentId
+                  if (updated.isEmpty()) {
+                    multiSelectActive = false
+                  }
+                  updated
+                } else {
+                  selectedIds + doc.documentId
+                }
+              }
+            },
             onTogglePin = { doc ->
               scope.launch { documentSource.setPinned(doc.documentId, !doc.pinned) }
             },

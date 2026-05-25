@@ -1,6 +1,6 @@
 # pageboy — ODT renderer plan
 
-## Status: 🟡 RECOMMENDED — review pending
+## Status: ✅ DONE — Phase K shipped (format/odt/ with hand-rolled OdtParser, OdfStyleResolver, OdfTextBlock)
 
 ## TL;DR
 

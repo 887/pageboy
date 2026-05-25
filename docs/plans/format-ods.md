@@ -1,6 +1,6 @@
 # pageboy — ODS renderer plan
 
-## Status: 🟡 RECOMMENDED — review pending
+## Status: ✅ DONE — Phase L shipped (format/ods/ with hand-rolled OdsParser, OdfCell, OdfSheet)
 
 ## TL;DR
 

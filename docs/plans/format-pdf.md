@@ -1,6 +1,6 @@
 # pageboy — PDF renderer + annotation + signing plan
 
-## Status: 🟡 RECOMMENDED — review pending
+## Status: ✅ DONE — Phases F+G+H shipped (format/pdf/ with PdfRenderer, PdfBody, PdfAnnotationOverlay, PdfAnnotationToolbar, signing/)
 
 PDF is the biggest single research plan in pageboy. Three concerns
 cascade into one another and so live in one file:

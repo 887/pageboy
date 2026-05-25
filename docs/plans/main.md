@@ -1,6 +1,6 @@
 # pageboy — main build plan
 
-## Status: 🟢 Phase H shipped; PDF (view + sign) complete pending Phase G annotation merge
+## Status: ✅ DONE — all phases (0, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, Q) shipped
 
 _Phase 0 verified, Phase A shipped (buildable Compose APK with family chrome — vertical nav rail, top bar, settings catalog DSL, AboutScreen, LicensesScreen, Licensee inventory). Phase B shipped (multi-root SAF document library — Room schema, four folder modes, magic-byte + extension classifier covering all 8 formats, scanner + rescan coordinator + repository, LibraryScreen with four whisperboy-style tabs + filters + search + sort, folders management screen, scan progress banner, Library settings section). Phases C+ are **stub headers** awaiting per-format research (see [`format-research.md`](format-research.md)) — each one names the format-research plan it depends on, and the research agent who owns that plan is expected to fill in the sub-step checkboxes for the corresponding phase before any implementation lands._
 
@@ -145,15 +145,27 @@ Goal: render plain text with reflow at the user's font size, encoding detection 
 
 ---
 
-## Phase F — PDF renderer _(stub — depends on `docs/plans/format-pdf.md`)_
+## Phase F — PDF renderer — _Shipped_
 
-Goal: render PDF pages, scroll smoothly through 500+ page documents, find-in-doc, link clicks. Heaviest renderer in the app; library choice (Pdfium / MuPDF / `android.graphics.pdf.PdfRenderer` / `PdfBox-Android` / hybrid) is the biggest single decision in pageboy and gets a dedicated plan. Sub-steps land with the research plan.
+Goal: render PDF pages, scroll smoothly through 500+ page documents, find-in-doc, link clicks. Heaviest renderer in the app; library choice (Pdfium / MuPDF / `android.graphics.pdf.PdfRenderer` / `PdfBox-Android` / hybrid) is the biggest single decision in pageboy and gets a dedicated plan.
+
+- [x] **F.1** `format/pdf/PdfRenderer.kt` implementing `DocumentRenderer` — wraps `androidx.pdf` sandboxed loader
+- [x] **F.2** `format/pdf/PdfBody.kt` — Compose host for the PDF viewer fragment
+- [x] **F.3** `format/pdf/PdfHandle.kt` — `DocumentHandle` subtype for PDF documents
+- [x] **F.4** `format/pdf/PdfTitleExtractor.kt` — metadata-based title extraction
+- [x] **F.5** Wired into `FormatRegistry` via `AppGraph`; magic-byte `%PDF-` detection in `DocumentClassifier`
 
 ---
 
-## Phase G — PDF annotation _(stub — depends on `docs/plans/format-pdf.md`)_
+## Phase G — PDF annotation — _Shipped_
 
-Goal: highlight, underline, strike-through, sticky note, freehand ink. Annotations persist as overlays (own table in Room) and on save get serialized back into the PDF (PDF 1.7 annotation dictionaries) so the annotated file opens correctly in every other PDF viewer. The annotation-overlay-vs-burn-in tradeoff is a major design decision documented in the research plan.
+Goal: highlight, underline, strike-through, sticky note, freehand ink. Annotations persist as overlays (own table in Room) and on save get serialized back into the PDF (PDF 1.7 annotation dictionaries) so the annotated file opens correctly in every other PDF viewer.
+
+- [x] **G.1** `data/annotation/` package — `AnnotationEntity`, `AnnotationKind`, `AnnotationPayload`, `AnnotationDao`, `AnnotationRepository`, `AnnotationSource`
+- [x] **G.2** `format/pdf/PdfAnnotationOverlay.kt` — Compose overlay rendering annotations on PDF pages (370 LOC)
+- [x] **G.3** `format/pdf/PdfAnnotationToolbar.kt` — M3 annotation tool selection toolbar
+- [x] **G.4** `format/pdf/internal/PdfCoordinates.kt` — coordinate transform between PDF user-space and screen-space
+- [x] **G.5** `format/pdf/export/PdfAnnotationExporter.kt` — OpenPDF export path for baking annotations into PDF copies
 
 ---
 
@@ -182,27 +194,55 @@ Goal: two complementary surfaces — (1) freehand visual stamp (PNG burn-in via 
 
 ---
 
-## Phase I — DOCX renderer _(stub — depends on `docs/plans/format-docx.md`)_
+## Phase I — DOCX renderer — _Shipped_
 
-Goal: render DOCX with paragraph styles, bold / italic / underline, headings, bullet lists, tables, embedded images. The OOXML XML schema is large; the research plan picks how much of it to support (the "every Microsoft Word doc the user has ever seen" subset, not the spec) and which library does the ZIP-walk + XML parse.
+Goal: render DOCX with paragraph styles, bold / italic / underline, headings, bullet lists, tables, embedded images. Apache POI 5.5.1 via centic9/poi-on-android + shared RichTextDocument intermediate model with ODT.
 
----
-
-## Phase J — XLSX renderer _(stub — depends on `docs/plans/format-xlsx.md`)_
-
-Goal: render XLSX as a read-only paged spreadsheet — cell values, basic formatting, sheet tabs along the bottom, frozen-pane header support. Formulas evaluate to their cached values from the XML (no recompute engine). Charts are TBD per the research plan.
-
----
-
-## Phase K — ODT renderer _(stub — depends on `docs/plans/format-odt.md`)_
-
-Goal: same surface as DOCX, applied to OpenDocument Text. ODT and DOCX share enough structural intuition that the research plan should also address whether to ship one renderer with two parsers feeding a common intermediate model or two fully separate renderers. (Strong prior: separate renderers, common intermediate model — but it's the research agent's call.)
+- [x] **I.1** `format/docx/DocxRenderer.kt` implementing `DocumentRenderer` — POI XWPF-based parser feeding RichTextDocument
+- [x] **I.2** `format/docx/DocxHandle.kt` — `DocumentHandle` subtype carrying parsed RichTextDocument
+- [x] **I.3** `format/docx/RichTextBlocks.kt` — Compose renderers for rich text block types (paragraphs, headings, lists, tables)
+- [x] **I.4** `format/docx/RichTextRuns.kt` — inline run rendering (bold, italic, underline, links)
+- [x] **I.5** `format/docx/DocxFind.kt` — find-in-document for DOCX content
+- [x] **I.6** Wired into `FormatRegistry` via `AppGraph`; ZIP magic-byte + `word/document.xml` detection in `DocumentClassifier`
 
 ---
 
-## Phase L — ODS renderer _(stub — depends on `docs/plans/format-ods.md`, sibling to format-xlsx)_
+## Phase J — XLSX renderer — _Shipped_
 
-Goal: spreadsheet sibling to ODT, equivalent to XLSX. Likely shares plumbing with XLSX (research plan should call this).
+Goal: render XLSX as a read-only paged spreadsheet — cell values, basic formatting, sheet tabs along the bottom, frozen-pane header support. Apache POI XSSF + xlsx-streamer for large workbooks; shared SpreadsheetModel with ODS.
+
+- [x] **J.1** `format/xlsx/XlsxRenderer.kt` implementing `DocumentRenderer` — POI XSSF-based parser
+- [x] **J.2** `format/xlsx/XlsxParser.kt` — XLSX parsing with plain XSSF + streaming fallback for large sheets
+- [x] **J.3** `format/xlsx/XlsxHandle.kt` — `DocumentHandle` subtype carrying parsed SpreadsheetModel
+- [x] **J.4** `format/xlsx/XlsxBody.kt` — Compose spreadsheet grid renderer with sheet tabs and frozen panes
+- [x] **J.5** `format/xlsx/XlsxFind.kt` — find-in-document for spreadsheet content
+- [x] **J.6** Wired into `FormatRegistry` via `AppGraph`; ZIP magic-byte + `xl/workbook.xml` detection in `DocumentClassifier`
+
+---
+
+## Phase K — ODT renderer — _Shipped_
+
+Goal: same surface as DOCX, applied to OpenDocument Text. Hand-rolled OdtParser over XmlPullParser + ZipInputStream feeding the shared RichTextDocument model.
+
+- [x] **K.1** `format/odt/OdtParser.kt` — XmlPullParser-based ODT content.xml + styles.xml parser
+- [x] **K.2** `format/odt/OdfStyleResolver.kt` — ODF style chain resolution (char styles, paragraph styles, list styles)
+- [x] **K.3** `format/odt/OdfTextBlock.kt` — ODF text block model types
+- [x] **K.4** `format/odt/OdtHandle.kt` — `DocumentHandle` subtype carrying parsed RichTextDocument
+- [x] **K.5** `format/odt/OdtFind.kt` — find-in-document for ODT content
+- [x] **K.6** Wired into `FormatRegistry` via `AppGraph`; ZIP magic-byte + mimetype-entry `application/vnd.oasis.opendocument.text` detection in `DocumentClassifier`
+
+---
+
+## Phase L — ODS renderer — _Shipped_
+
+Goal: spreadsheet sibling to ODT, equivalent to XLSX. Hand-rolled OdsParser over XmlPullParser + ZipInputStream feeding the shared SpreadsheetModel.
+
+- [x] **L.1** `format/ods/OdsParser.kt` — XmlPullParser-based ODS content.xml parser with two-pass design (eager metadata + lazy cell loading)
+- [x] **L.2** `format/ods/OdfCell.kt` — ODF cell model types (Text, Number, Date, Bool, Placeholder)
+- [x] **L.3** `format/ods/OdfSheet.kt` — ODF sheet metadata and cell source
+- [x] **L.4** `format/ods/OdsHandle.kt` — `DocumentHandle` subtype carrying parsed SpreadsheetModel
+- [x] **L.5** `format/ods/OdsFind.kt` — find-in-document for ODS content
+- [x] **L.6** Wired into `FormatRegistry` via `AppGraph`; ZIP magic-byte + mimetype-entry `application/vnd.oasis.opendocument.spreadsheet` detection in `DocumentClassifier`
 
 ---
 
@@ -255,15 +295,25 @@ allowlist).
 
 ---
 
-## Phase N — share-sheet ingest + recents _(spec'd in [`open-with.md`](open-with.md); intent-filter declarations landed in Phase A.6)_
+## Phase N — share-sheet ingest + recents — _Shipped_
 
-Goal: opening any supported file from another app (file manager, email client, browser) lands in pageboy via a `content://` intent, gets resolved to a `DocumentEntity` (creating one for the ad-hoc URI), and shows the recents list on the next cold start so the user can find what they opened last week. Sub-steps land when Phase A.6 is closed and the team has a clearer picture of how much state the recents surface should keep.
+Goal: opening any supported file from another app (file manager, email client, browser) lands in pageboy via a `content://` intent, gets resolved to a `DocumentEntity` (creating one for the ad-hoc URI), and shows the recents list on the next cold start so the user can find what they opened last week.
+
+- [x] **N.1** `openwith/OpenWithActivity.kt` — separate exported Activity (~88 LOC) handling `ACTION_VIEW` intents
+- [x] **N.2** `data/openwith/OpenWithResolver.kt` — resolves intents to `OpenWithResult` (Ready / UnknownFormat / PermissionRefused / Failure)
+- [x] **N.3** `data/openwith/AdHocDocumentStore.kt` — creates ad-hoc DocumentEntity rows + handles `takePersistableUriPermission` for "Keep this document"
+- [x] **N.4** `data/openwith/OpenWithEphemeralCleanupWorker.kt` — WorkManager daily cleanup of expired ad-hoc documents
+- [x] **N.5** `data/openwith/OpenWithSettings.kt` — ephemeral retention days + auto-classify settings
+- [x] **N.6** Manifest intent filters for all formats including `application/octet-stream` + extension pathPattern catch-alls
 
 ---
 
-## Phase O — release pipeline _(stub — mirrors whisperboy Phase O)_
+## Phase O — release pipeline — _Shipped_
 
-Goal: `scripts/build-release-apk.sh` + the self-disabling `.github/workflows/release.yml` fallback. Direct port of whisperboy's scripts with `whisperboy` → `pageboy` substitution. Sub-steps land when Phase A is green.
+Goal: `scripts/build-release-apk.sh` + the self-disabling `.github/workflows/release.yml` fallback. Direct port of whisperboy's scripts with `whisperboy` -> `pageboy` substitution.
+
+- [x] **O.1** `scripts/build-release-apk.sh` — release APK build script
+- [x] **O.2** Release pipeline configured for Obtainium-friendly distribution
 
 ---
 

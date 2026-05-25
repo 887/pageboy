@@ -1,6 +1,6 @@
 # pageboy — open-source licenses plan
 
-## Status: 🟡 PRESCRIBED — apply during main.md Phase A.5; inventory snapshot deferred
+## Status: ✅ DONE — Licensee plugin configured, LicensesScreen shipped, 60+ entry inventory generated in Phase A.5
 
 ## Why
 

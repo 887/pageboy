@@ -1,6 +1,6 @@
 # pageboy — cross-app shared-code analysis
 
-## Status: 🟡 STUB — TBD after pageboy ships Phase A scaffold
+## Status: OBSOLETE — superseded by independent app implementations; all apps shipped without shared code extraction (per the standing "only share if the win is biiiiig" rule)
 
 ## Why this file exists
 

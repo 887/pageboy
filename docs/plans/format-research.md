@@ -1,6 +1,6 @@
 # pageboy — format research
 
-## Status: 🟡 SEED — this is the prompt for the next round of research agents. Each agent produces one `docs/plans/format-<name>.md` with their findings + recommendation, then the relevant main.md phase ticks open.
+## Status: ✅ DONE — all 9 format plans (Markdown, TXT, PDF, DOCX, XLSX, ODT, ODS, EPUB, MOBI) completed and shipped
 
 ## How this round works
 

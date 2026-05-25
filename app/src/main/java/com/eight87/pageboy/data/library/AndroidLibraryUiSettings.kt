@@ -29,6 +29,12 @@ class AndroidLibraryUiSettings(
       LibraryTab.fromId(raw)
     }
 
+  override val viewMode: Flow<ViewMode> =
+    dataStore.data.map { prefs ->
+      val raw = prefs[KEY_VIEW_MODE] ?: ViewMode.List.name
+      ViewMode.fromId(raw)
+    }
+
   override val selectedFormats: Flow<Set<DocumentFormat>> =
     dataStore.data.map { prefs ->
       val raw = prefs[KEY_FORMATS] ?: emptySet()
@@ -49,6 +55,10 @@ class AndroidLibraryUiSettings(
     dataStore.edit { it[KEY_TAB] = value.name }
   }
 
+  override suspend fun setViewMode(value: ViewMode) {
+    dataStore.edit { it[KEY_VIEW_MODE] = value.name }
+  }
+
   override suspend fun setSelectedFormats(value: Set<DocumentFormat>) {
     dataStore.edit { it[KEY_FORMATS] = value.map { f -> DocumentFormat.id(f) }.toSet() }
   }
@@ -64,6 +74,7 @@ class AndroidLibraryUiSettings(
   private companion object {
     val KEY_SORT = stringPreferencesKey("library_sort_key")
     val KEY_TAB = stringPreferencesKey("library_tab")
+    val KEY_VIEW_MODE = stringPreferencesKey("library_view_mode")
     val KEY_FORMATS = stringSetPreferencesKey("library_selected_formats")
     val KEY_COLLECTIONS = stringSetPreferencesKey("library_selected_collections")
     val KEY_SHOW_HIDDEN = booleanPreferencesKey("library_show_hidden_files")

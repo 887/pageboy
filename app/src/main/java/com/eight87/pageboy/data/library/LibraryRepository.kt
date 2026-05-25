@@ -42,6 +42,14 @@ class LibraryRepository(
     documentDao.setScrollPosition(id, positionJson, fraction.coerceIn(0f, 1f))
   }
 
+  override suspend fun deleteDocuments(ids: Set<String>) {
+    database.withTransaction {
+      for (id in ids) {
+        documentDao.deleteById(id)
+      }
+    }
+  }
+
   // ---- ScanWriter ----
 
   override suspend fun allDocumentIds(): Set<String> =

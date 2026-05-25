@@ -1,6 +1,6 @@
 # pageboy — plain-text (.txt) renderer plan
 
-## Status: 🟡 RECOMMENDED — review pending
+## Status: ✅ DONE — Phase E shipped (hand-rolled renderer in format/txt/)
 
 ## Recommendation
 

@@ -1,7 +1,8 @@
 package com.eight87.pageboy.ui.library
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -42,18 +45,68 @@ import com.eight87.pageboy.R
 import com.eight87.pageboy.data.library.DocumentEntity
 import com.eight87.pageboy.data.library.DocumentFormat
 import com.eight87.pageboy.data.library.LibrarySortKey
+import com.eight87.pageboy.data.library.ViewMode
 
 /**
- * Document list with section headers. The list renders a flat sequence of
- * documents with optional sticky-ish section headers driven by the current
- * sort key (Format sorts get a header per format; Title sorts get a header
- * per first letter; date-based sorts skip headers).
+ * Document list/grid with section headers. Dispatches on [viewMode]:
+ * - [ViewMode.List] — LazyColumn (the original list layout)
+ * - [ViewMode.Tile] — LazyVerticalGrid with adaptive 160dp columns
+ * - [ViewMode.TwoColumn] — LazyVerticalGrid with fixed 2 columns
+ *
+ * Section headers render across the full grid width when in grid mode.
  */
 @Composable
 internal fun LibraryDocumentList(
   documents: List<DocumentEntity>,
   sortKey: LibrarySortKey,
+  viewMode: ViewMode,
+  selectedIds: Set<String>,
+  multiSelectActive: Boolean,
   onTap: (DocumentEntity) -> Unit,
+  onLongPress: (DocumentEntity) -> Unit,
+  onTogglePin: (DocumentEntity) -> Unit,
+) {
+  when (viewMode) {
+    ViewMode.List -> LibraryListView(
+      documents = documents,
+      sortKey = sortKey,
+      selectedIds = selectedIds,
+      multiSelectActive = multiSelectActive,
+      onTap = onTap,
+      onLongPress = onLongPress,
+      onTogglePin = onTogglePin,
+    )
+    ViewMode.Tile -> LibraryGridView(
+      documents = documents,
+      sortKey = sortKey,
+      columns = GridCells.Adaptive(160.dp),
+      selectedIds = selectedIds,
+      multiSelectActive = multiSelectActive,
+      onTap = onTap,
+      onLongPress = onLongPress,
+      onTogglePin = onTogglePin,
+    )
+    ViewMode.TwoColumn -> LibraryGridView(
+      documents = documents,
+      sortKey = sortKey,
+      columns = GridCells.Fixed(2),
+      selectedIds = selectedIds,
+      multiSelectActive = multiSelectActive,
+      onTap = onTap,
+      onLongPress = onLongPress,
+      onTogglePin = onTogglePin,
+    )
+  }
+}
+
+@Composable
+private fun LibraryListView(
+  documents: List<DocumentEntity>,
+  sortKey: LibrarySortKey,
+  selectedIds: Set<String>,
+  multiSelectActive: Boolean,
+  onTap: (DocumentEntity) -> Unit,
+  onLongPress: (DocumentEntity) -> Unit,
   onTogglePin: (DocumentEntity) -> Unit,
 ) {
   LazyColumn(
@@ -71,7 +124,9 @@ internal fun LibraryDocumentList(
       item(key = doc.documentId) {
         DocumentCard(
           document = doc,
+          selected = doc.documentId in selectedIds,
           onTap = { onTap(doc) },
+          onLongPress = { onLongPress(doc) },
           onTogglePin = { onTogglePin(doc) },
         )
         if (index < documents.lastIndex) {
@@ -85,25 +140,81 @@ internal fun LibraryDocumentList(
   }
 }
 
+@Composable
+private fun LibraryGridView(
+  documents: List<DocumentEntity>,
+  sortKey: LibrarySortKey,
+  columns: GridCells,
+  selectedIds: Set<String>,
+  multiSelectActive: Boolean,
+  onTap: (DocumentEntity) -> Unit,
+  onLongPress: (DocumentEntity) -> Unit,
+  onTogglePin: (DocumentEntity) -> Unit,
+) {
+  LazyVerticalGrid(
+    columns = columns,
+    modifier = Modifier.fillMaxSize().semantics { testTag = "library_document_grid" },
+  ) {
+    var lastSection: String? = null
+    documents.forEach { doc ->
+      val section = sectionKey(doc, sortKey)
+      if (section != null && section != lastSection) {
+        lastSection = section
+        item(
+          key = "header_$section",
+          span = { GridItemSpan(maxLineSpan) },
+        ) {
+          SectionHeader(text = section)
+        }
+      }
+      item(key = doc.documentId) {
+        DocumentTile(
+          document = doc,
+          selected = doc.documentId in selectedIds,
+          onTap = { onTap(doc) },
+          onLongPress = { onLongPress(doc) },
+          onTogglePin = { onTogglePin(doc) },
+        )
+      }
+    }
+  }
+}
+
 /**
  * Single document row matching tonearmboy's list row pattern:
  * 16dp horizontal / 10dp vertical padding, 48dp cover icon with 4dp
  * corner radius, 12dp spacer, title (titleSmall, maxLines=1) +
  * subtitle (bodySmall, maxLines=1), MoreVert overflow icon.
+ *
+ * When [selected] is true (multi-select active), the row gets a
+ * `secondaryContainer` background.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun DocumentCard(
   document: DocumentEntity,
+  selected: Boolean,
   onTap: () -> Unit,
+  onLongPress: () -> Unit,
   onTogglePin: () -> Unit,
 ) {
   val format = DocumentFormat.fromId(document.format)
   var menuOpen by remember { mutableStateOf(false) }
 
+  val backgroundColor = if (selected) {
+    MaterialTheme.colorScheme.secondaryContainer
+  } else {
+    MaterialTheme.colorScheme.surface
+  }
+
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clickable(onClick = onTap)
+      .background(backgroundColor)
+      .combinedClickable(
+        onClick = onTap,
+        onLongClick = onLongPress,
+      )
       .padding(horizontal = 16.dp, vertical = 10.dp)
       .semantics { testTag = "document_card_${document.documentId.take(8)}" },
     verticalAlignment = Alignment.CenterVertically,
