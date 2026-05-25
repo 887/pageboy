@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      Base theme is the OS Material light NoActionBar — Compose's
-      MaterialExpressiveTheme owns runtime colours / typography. The
-      Android theme is only the bootstrap surface the window opens
-      onto.
+      Splash + post-splash theme. Cold-boot intentionally always reads
+      dark (windowBackground = splash_background = #0F0A08) to avoid a
+      white flash when the system theme is light — same pattern as
+      tonearmboy D.17.2. Compose's MaterialExpressiveTheme owns
+      runtime colours; the Android theme is only the bootstrap surface.
     -->
     <style name="Theme.Pageboy" parent="android:Theme.Material.Light.NoActionBar">
-        <!-- Close-out — Android 12+ splash screen icon with dp-inset
-             shrink so the ferret inscribes inside the system circle
-             (m3-expressive.md gotcha #4). -->
+        <item name="android:windowBackground">@color/splash_background</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
     </style>
 </resources>
