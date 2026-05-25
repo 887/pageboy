@@ -56,9 +56,17 @@ internal fun LibraryScanProgressBanner(state: ScanState.Scanning) {
           overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(12.dp))
-        LinearProgressIndicator(
-          modifier = Modifier.weight(1f),
-        )
+        val total = state.total
+        if (total != null && total > 0) {
+          LinearProgressIndicator(
+            progress = { (state.documentsFound.toFloat() / total).coerceIn(0f, 1f) },
+            modifier = Modifier.weight(1f),
+          )
+        } else {
+          LinearProgressIndicator(
+            modifier = Modifier.weight(1f),
+          )
+        }
       }
     }
   }

@@ -32,6 +32,9 @@ import kotlinx.serialization.Serializable
 /** Phase B — sub-route inside Settings → Library → Source folders. */
 @Serializable data object SettingsLibraryFoldersRoute : NavKey
 
+/** Setup wizard route — shown on first launch or retroactively if no library roots exist. */
+@Serializable data object SetupWizardRoute : NavKey
+
 /**
  * Phase C — reader route. Title resolves through the
  * `ReaderStateProjector` from the `DocumentHandle.title` once the

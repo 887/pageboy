@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-      Pageboy is SAF-only — documents live in folders the user explicitly
-      opts into via ACTION_OPEN_DOCUMENT_TREE. No READ_MEDIA_*, no
-      READ_EXTERNAL_STORAGE. See CLAUDE.md "Why SAF (not MediaStore)" for
-      the rationale.
-
-      No foreground-service permissions — pageboy is a foreground-only
-      app, no playback service equivalent.
+      Setup wizard offers two paths:
+        1. SAF-only (folder picker) — no extra permissions needed.
+        2. All-files access — needs MANAGE_EXTERNAL_STORAGE (Android 11+)
+           or READ_EXTERNAL_STORAGE (older devices).
     -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
 
     <application
         android:name=".PageboyApplication"

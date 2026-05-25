@@ -31,12 +31,17 @@ sealed class ScanState {
   data object Idle : ScanState()
 
   /**
-   * Active scan. [documentsFound] ticks up continuously as the SAF walker
+   * Active scan. [documentsFound] ticks up continuously as the walker
    * emits per-folder batches; [currentFolder] is the folder currently
    * being walked, surfaced by the in-library progress banner.
+   *
+   * [total] is non-null when the scanner knows the expected document count
+   * upfront (e.g. a filesystem scan that pre-counts files). SAF scanning
+   * cannot determine the total in advance, so it stays null.
    */
   data class Scanning(
     val documentsFound: Int = 0,
+    val total: Int? = null,
     val currentFolder: String? = null,
   ) : ScanState()
 

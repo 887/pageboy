@@ -11,14 +11,22 @@ import com.eight87.pageboy.data.annotation.AnnotationStore
 import com.eight87.pageboy.data.library.AndroidLibraryRescanCoordinator
 import com.eight87.pageboy.data.library.AndroidLibraryUiSettings
 import com.eight87.pageboy.data.library.AndroidPersistedUriPermissionStore
+import com.eight87.pageboy.data.library.AndroidSetupSettings
 import com.eight87.pageboy.data.library.DocumentFormat
 import com.eight87.pageboy.data.library.DocumentSource
+import com.eight87.pageboy.data.library.DocumentSourceMode
+import com.eight87.pageboy.data.library.FileSystemScanner
+import com.eight87.pageboy.data.library.FolderType
 import com.eight87.pageboy.data.library.LibraryDatabase
 import com.eight87.pageboy.data.library.LibraryRepository
 import com.eight87.pageboy.data.library.LibraryRescanCoordinator
+import com.eight87.pageboy.data.library.LibraryRoot
+import com.eight87.pageboy.data.library.LibraryScanner
 import com.eight87.pageboy.data.library.LibraryUiSettings
+import com.eight87.pageboy.data.library.ScanSnapshot
 import com.eight87.pageboy.data.library.PersistedUriPermissionStore
 import com.eight87.pageboy.data.library.SafLibraryScanner
+import com.eight87.pageboy.data.library.SetupSettings
 import com.eight87.pageboy.data.openwith.AdHocDocumentStore
 import com.eight87.pageboy.data.openwith.AndroidOpenWithResolver
 import com.eight87.pageboy.data.openwith.AndroidOpenWithSettings
@@ -115,6 +123,15 @@ class AppGraph(private val context: Context) {
     AndroidLibraryUiSettings(uiDataStore)
   }
 
+  // ---- Setup wizard settings ----
+
+  private val setupDataStore: DataStore<Preferences> =
+    context.applicationContext.setupSettingsDataStore
+
+  val setupSettings: SetupSettings by lazy {
+    AndroidSetupSettings(setupDataStore)
+  }
+
   val libraryRepository: LibraryRepository by lazy {
     LibraryRepository(database)
   }
@@ -122,10 +139,28 @@ class AppGraph(private val context: Context) {
   // Narrow handles the UI sees.
   val documentSource: DocumentSource get() = libraryRepository
 
-  private val scanner: SafLibraryScanner by lazy {
+  private val safScanner: SafLibraryScanner by lazy {
     SafLibraryScanner(
       context = context.applicationContext,
       includeHiddenProvider = { false },
+    )
+  }
+
+  private val fileSystemScanner: FileSystemScanner by lazy {
+    FileSystemScanner(
+      includeHiddenProvider = { false },
+    )
+  }
+
+  /**
+   * Mode-aware scanner: reads the document source mode and dispatches to
+   * the appropriate scanner implementation.
+   */
+  private val scanner: LibraryScanner by lazy {
+    ModeAwareScanner(
+      setupSettings = setupSettings,
+      safScanner = safScanner,
+      fileSystemScanner = fileSystemScanner,
     )
   }
 
@@ -312,3 +347,43 @@ private val Context.signingSettingsDataStore: DataStore<Preferences> by preferen
 private val Context.openWithSettingsDataStore: DataStore<Preferences> by preferencesDataStore(
   name = "open_with_settings",
 )
+
+private val Context.setupSettingsDataStore: DataStore<Preferences> by preferencesDataStore(
+  name = "setup_settings",
+)
+
+/**
+ * Scanner that delegates to [SafLibraryScanner] or [FileSystemScanner]
+ * based on the persisted [DocumentSourceMode]. In AllFiles mode, the
+ * scanner ignores the caller-supplied roots and walks the standard
+ * filesystem paths; in FolderPicker mode, it delegates to the SAF scanner
+ * with the caller-supplied roots.
+ */
+private class ModeAwareScanner(
+  private val setupSettings: SetupSettings,
+  private val safScanner: SafLibraryScanner,
+  private val fileSystemScanner: FileSystemScanner,
+) : LibraryScanner {
+
+  override suspend fun scan(
+    roots: List<LibraryRoot>,
+    onProgress: suspend (documentsFound: Int, currentFolder: String?) -> Unit,
+  ): ScanSnapshot {
+    val mode = setupSettings.documentSourceMode.flow.first()
+
+    return when (mode) {
+      DocumentSourceMode.FolderPicker -> safScanner.scan(roots, onProgress)
+      DocumentSourceMode.AllFiles -> {
+        // In AllFiles mode, build synthetic roots from default paths.
+        val allFilesRoots = FileSystemScanner.DEFAULT_SCAN_PATHS.map { dir ->
+          LibraryRoot(
+            treeUri = android.net.Uri.fromFile(dir),
+            folderType = FolderType.Root,
+            displayName = dir.name,
+          )
+        }
+        fileSystemScanner.scan(allFilesRoots, onProgress)
+      }
+    }
+  }
+}

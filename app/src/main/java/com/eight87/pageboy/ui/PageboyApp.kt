@@ -33,6 +33,9 @@ import com.eight87.pageboy.data.library.LibraryRescanCoordinator
 import com.eight87.pageboy.data.library.LibraryTab
 import com.eight87.pageboy.data.library.LibraryUiSettings
 import com.eight87.pageboy.data.library.PersistedUriPermissionStore
+import com.eight87.pageboy.data.library.SetupSettings
+import com.eight87.pageboy.ui.setup.SetupWizardScreen
+import kotlinx.coroutines.flow.flowOf
 import com.eight87.pageboy.domain.render.RendererReadingPrefs
 import com.eight87.pageboy.format.registry.FormatRegistry
 import com.eight87.pageboy.ui.library.LibraryRail
@@ -78,16 +81,43 @@ fun PageboyApp(
   val effectiveScrollPersistence: ScrollPersistence? = appGraph?.scrollPersistence
   val effectiveReadingPrefs: RendererReadingPrefs? = appGraph?.rendererReadingPrefs
   val signingFactory: (() -> InMemorySigningCommands)? = appGraph?.signingCommandsFactory
+  val effectiveSetupSettings: SetupSettings? = appGraph?.setupSettings
+
+  // ---- Setup wizard detection ----
+  // Show the wizard if setup is not complete AND no library roots exist.
+  // For retroactive support: existing installs where setup_complete was
+  // never written will default to false, triggering the wizard on next
+  // launch.
+  val setupComplete by (effectiveSetupSettings?.setupComplete?.flow
+    ?: flowOf(true)).collectAsStateWithLifecycle(initialValue = true)
+  val hasRoots by (effectiveRootStore?.observeRoots()
+    ?: flowOf(emptyList())).collectAsStateWithLifecycle(initialValue = null)
+
+  val showWizard = !setupComplete && (hasRoots == null || hasRoots!!.isEmpty())
 
   LaunchedEffect(effectiveCoordinator) { /* trigger lazy init */ }
 
   val currentTab by (effectiveUiSettings?.tab
-    ?: kotlinx.coroutines.flow.flowOf(LibraryTab.All))
+    ?: flowOf(LibraryTab.All))
     .collectAsStateWithLifecycle(initialValue = LibraryTab.All)
 
   val backStackSnapshot: List<NavKey> = backStack.toList()
   val onLibraryRoute = remember(backStackSnapshot) {
     backStackSnapshot.lastOrNull() is LibraryRoute
+  }
+
+  // Show setup wizard instead of the main library if first-launch
+  // conditions are met.
+  if (showWizard && effectiveSetupSettings != null && effectiveRootStore != null) {
+    SetupWizardScreen(
+      setupSettings = effectiveSetupSettings,
+      persistedUriPermissionStore = effectiveRootStore,
+      onSetupComplete = {
+        // Trigger a rescan after setup completes.
+        effectiveCoordinator?.requestRescan()
+      },
+    )
+    return
   }
 
   Row(modifier = Modifier.fillMaxSize().semantics { testTag = "pageboy_root" }) {
