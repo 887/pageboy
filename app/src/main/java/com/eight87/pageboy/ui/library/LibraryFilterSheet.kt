@@ -12,9 +12,10 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,7 +46,10 @@ internal fun LibraryFilterSheet(
 ) {
   var draftFormats by remember(selectedFormats) { mutableStateOf(selectedFormats) }
   var draftCollections by remember(selectedCollections) { mutableStateOf(selectedCollections) }
-  val sheetState = rememberModalBottomSheetState()
+  val sheetState = rememberBottomSheetState(
+    initialValue = SheetValue.Hidden,
+    enabledValues = setOf(SheetValue.Hidden, SheetValue.PartiallyExpanded, SheetValue.Expanded),
+  )
 
   ModalBottomSheet(
     onDismissRequest = onDismiss,

@@ -3,6 +3,7 @@ package com.eight87.pageboy.format.epub
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -20,6 +21,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.compose.AndroidFragment
 import com.eight87.pageboy.domain.render.RendererContext
 import com.eight87.pageboy.domain.render.ScrollPosition
+import com.eight87.pageboy.format.webview.discardDeadWebView
 import org.json.JSONObject
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
@@ -231,6 +233,12 @@ private class HardenedReadiumWebViewClient(
     // serves spine + assets via its asset-server.
     return delegate.shouldInterceptRequest(view, request)
   }
+
+  override fun onRenderProcessGone(
+    view: WebView,
+    detail: RenderProcessGoneDetail,
+  ): Boolean =
+    delegate.onRenderProcessGone(view, detail) || discardDeadWebView(view)
 
   override fun shouldOverrideUrlLoading(
     view: WebView,

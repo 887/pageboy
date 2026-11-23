@@ -6,11 +6,11 @@ import com.eight87.pageboy.data.annotation.AnnotationPayload
 import com.eight87.pageboy.data.annotation.PdfPoint
 import com.eight87.pageboy.data.annotation.PdfRect
 import com.eight87.pageboy.format.pdf.export.PdfAnnotationExporter
-import com.lowagie.text.Document
-import com.lowagie.text.PageSize
-import com.lowagie.text.Paragraph
-import com.lowagie.text.pdf.PdfReader
-import com.lowagie.text.pdf.PdfWriter
+import org.openpdf.text.Document
+import org.openpdf.text.PageSize
+import org.openpdf.text.Paragraph
+import org.openpdf.text.pdf.PdfReader
+import org.openpdf.text.pdf.PdfWriter
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -186,8 +186,8 @@ class PdfAnnotationExporterTest {
     assertEquals(2, written)
 
     val reader = PdfReader(output.toByteArray())
-    val page1Annots = reader.getPageN(1).getAsArray(com.lowagie.text.pdf.PdfName.ANNOTS)
-    val page3Annots = reader.getPageN(3).getAsArray(com.lowagie.text.pdf.PdfName.ANNOTS)
+    val page1Annots = reader.getPageN(1).getAsArray(org.openpdf.text.pdf.PdfName.ANNOTS)
+    val page3Annots = reader.getPageN(3).getAsArray(org.openpdf.text.pdf.PdfName.ANNOTS)
     assertNotNull(page1Annots)
     assertNotNull(page3Annots)
     assertEquals(1, page1Annots.size())
@@ -221,9 +221,9 @@ class PdfAnnotationExporterTest {
     )
     exporter.export(ByteArrayInputStream(source), output, listOf(a))
     val reader = PdfReader(output.toByteArray())
-    val annots = reader.getPageN(1).getAsArray(com.lowagie.text.pdf.PdfName.ANNOTS)
+    val annots = reader.getPageN(1).getAsArray(org.openpdf.text.pdf.PdfName.ANNOTS)
     val annot = annots.getAsDict(0)
-    val c = annot.getAsArray(com.lowagie.text.pdf.PdfName.C)
+    val c = annot.getAsArray(org.openpdf.text.pdf.PdfName.C)
     assertNotNull(c)
     assertEquals(3, c.size())
     reader.close()
@@ -233,11 +233,11 @@ class PdfAnnotationExporterTest {
     val reader = PdfReader(pdfBytes)
     try {
       val page = reader.getPageN(1)
-      val annots = page.getAsArray(com.lowagie.text.pdf.PdfName.ANNOTS)
+      val annots = page.getAsArray(org.openpdf.text.pdf.PdfName.ANNOTS)
       assertNotNull("/Annots array present on page 1", annots)
       assertTrue("at least one /Annot entry", annots.size() >= 1)
       val first = annots.getAsDict(0)
-      val subtype = first.getAsName(com.lowagie.text.pdf.PdfName.SUBTYPE)
+      val subtype = first.getAsName(org.openpdf.text.pdf.PdfName.SUBTYPE)
       assertNotNull("/Subtype present", subtype)
       assertEquals("/$expectedSubtype", subtype.toString())
     } finally {

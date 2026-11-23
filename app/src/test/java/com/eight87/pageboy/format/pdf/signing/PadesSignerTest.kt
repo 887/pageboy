@@ -1,7 +1,7 @@
 package com.eight87.pageboy.format.pdf.signing
 
-import com.lowagie.text.pdf.AcroFields
-import com.lowagie.text.pdf.PdfReader
+import org.openpdf.text.pdf.AcroFields
+import org.openpdf.text.pdf.PdfReader
 import org.bouncycastle.cms.CMSSignedData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -46,7 +46,7 @@ class PadesSignerTest {
     assertEquals(
       "subfilter is ETSI.CAdES.detached per PAdES-B-B",
       "/${PadesSigner.ETSI_CADES_DETACHED.toString().trimStart('/')}",
-      sig.get(com.lowagie.text.pdf.PdfName.SUBFILTER).toString(),
+      sig.get(org.openpdf.text.pdf.PdfName.SUBFILTER).toString(),
     )
     reader.close()
   }
@@ -82,7 +82,7 @@ class PadesSignerTest {
     val reader = PdfReader(signedBytes)
     val sigDict = reader.acroFields.getSignatureDictionary(reader.acroFields.signedFieldNames.first())
     // Stored as a PDF string surrounded by parens; toString trims the wrapping.
-    val name = sigDict.getAsString(com.lowagie.text.pdf.PdfName.NAME)?.toUnicodeString()
+    val name = sigDict.getAsString(org.openpdf.text.pdf.PdfName.NAME)?.toUnicodeString()
     assertEquals("Alex Pageboy", name)
     reader.close()
   }

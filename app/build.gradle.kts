@@ -1,4 +1,5 @@
 import java.time.LocalDate
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
@@ -32,8 +33,11 @@ val buildDateUtc: String = DateTimeFormatter.ISO_LOCAL_DATE
 
 android {
     namespace = "com.eight87.pageboy"
-    compileSdk = 36
-    compileSdkExtension = 19  // required by androidx.pdf-viewer-fragment 1.0.0-alpha18
+    // androidx 2026.11 libraries require compileSdk >= 37.1. androidx.pdf
+    // 1.0.0-beta01's AAR metadata asks for 36-ext19; API 37 already
+    // includes that SDK-extension level, so no extension platform is needed.
+    compileSdk = 37
+    compileSdkMinor = 2
     base {
         archivesName.set("pageboy")
     }
@@ -60,8 +64,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
         // Phase M — Readium Kotlin Toolkit 3.2.0 requires core library
         // desugaring (uses java.time + java.nio APIs that minSdk 28 does
         // not natively cover). The desugar runtime ships in the APK as
@@ -89,6 +93,9 @@ android {
         excludes += listOf(
           "META-INF/LICENSE",
           "META-INF/LICENSE.txt",
+          // Bouncy Castle 1.87 ships `META-INF/LICENSE.md` in each of
+          // bcprov / bcpkix / bcutil (same text, duplicate path).
+          "META-INF/LICENSE.md",
           "META-INF/NOTICE",
           "META-INF/NOTICE.txt",
           "META-INF/DEPENDENCIES",
@@ -157,25 +164,23 @@ licensee {
     // libs.versions.toml comment); we treat it as such for the
     // bundled LicensesScreen surface but cannot claim the SPDX
     // mapping in the build-time inventory.
-    // bcprov resolves to 1.81.1 transitively via bcutil's [1.81,1.82)
-    // range; bcpkix + bcutil stay on 1.81.
-    allowDependency("org.bouncycastle", "bcprov-jdk18on", "1.81.1") {
+    allowDependency("org.bouncycastle", "bcprov-jdk18on", "1.87") {
         because("Bouncy Castle MIT X11-style license (bouncycastle.org/licence.html). " +
                 "Functionally MIT; Licensee cannot auto-map the project URL.")
     }
-    allowDependency("org.bouncycastle", "bcpkix-jdk18on", "1.81") {
+    allowDependency("org.bouncycastle", "bcpkix-jdk18on", "1.87") {
         because("Bouncy Castle MIT X11-style license (bouncycastle.org/licence.html). " +
                 "Functionally MIT; Licensee cannot auto-map the project URL.")
     }
-    allowDependency("org.bouncycastle", "bcutil-jdk18on", "1.81.1") {
+    allowDependency("org.bouncycastle", "bcutil-jdk18on", "1.87") {
         because("Bouncy Castle MIT X11-style license (bouncycastle.org/licence.html). " +
                 "Functionally MIT; Licensee cannot auto-map the project URL.")
     }
-    // Phase H — OpenPDF 2.0.4 dual-licenses MPL-2.0 OR LGPL-2.1+;
+    // Phase H — OpenPDF 3.0.6 dual-licenses MPL-2.0 OR LGPL-2.1+;
     // we pick MPL-2.0 (already on the family allowlist), but the
     // POM may declare both — explicit allowDependency keeps the
     // inventory deterministic if Licensee maps to the LGPL entry.
-    allowDependency("com.github.librepdf", "openpdf", "2.0.4") {
+    allowDependency("com.github.librepdf", "openpdf", "3.0.6") {
         because("OpenPDF dual-licensed MPL-2.0 OR LGPL-2.1+; pageboy ships under MPL-2.0.")
     }
 }
@@ -198,16 +203,26 @@ androidComponents {
             }
             into(licensesAssetDir)
         }
-        afterEvaluate {
-            tasks.named("merge${variantName}Assets").configure {
-                dependsOn(copyTask)
-            }
+        // Every task that reads `src/main/assets` must run after the copy,
+        // otherwise Gradle 9 flags an implicit dependency (lint's model +
+        // analysis tasks hash the asset tree too).
+        val assetConsumers = setOf(
+            "merge${variantName}Assets",
+            "generate${variantName}LintReportModel",
+            "lintAnalyze${variantName}",
+            "generate${variantName}LintVitalReportModel",
+            "lintVitalAnalyze${variantName}",
+        )
+        tasks.matching { it.name in assetConsumers }.configureEach {
+            dependsOn(copyTask)
         }
     }
 }
 
 kotlin {
-    jvmToolchain(17)
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_21)
+    }
 }
 
 dependencies {
@@ -372,14 +387,14 @@ dependencies {
   // dex inside the APK; R8 tree-shakes unreferenced parts.
   coreLibraryDesugaring(libs.desugar.jdk.libs)
   // Phase H — PDF signing.
-  //   * OpenPDF 2.0.4 (MPL-2.0): the PDF writer/stamper for the
+  //   * OpenPDF 3.0.6 (MPL-2.0): the PDF writer/stamper for the
   //     visual-stamp burn-in path (Phase H.4) and the PAdES
   //     signature appearance + /ByteRange computation (Phase H.5).
   //     Pure-Java; ~2 MB APK, ~1.5 MB post-R8.
-  //   * Bouncy Castle bcprov-jdk18on 1.81 (MIT X11-style): JCA
+  //   * Bouncy Castle bcprov-jdk18on 1.87 (MIT X11-style): JCA
   //     security provider — EC P-256 key gen, RSA-PSS / ECDSA
   //     signing primitives, PKCS#12 keystore parser.
-  //   * Bouncy Castle bcpkix-jdk18on 1.81 (MIT X11-style):
+  //   * Bouncy Castle bcpkix-jdk18on 1.87 (MIT X11-style):
   //     CMS / PKCS#7 SignedData generator + X.509 v3 cert builder
   //     for the self-signed Keystore path.
   // Total Phase H delta budget: ~2.5–3 MB post-R8.

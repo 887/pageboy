@@ -3,7 +3,7 @@ package com.eight87.pageboy.ui.settings.folders
 import android.net.Uri
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import com.eight87.pageboy.TestApplication
 import com.eight87.pageboy.data.library.FolderType

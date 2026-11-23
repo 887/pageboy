@@ -32,7 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
@@ -80,7 +80,7 @@ fun LibraryScreen(
     .collectAsStateWithLifecycle(initialValue = ScanState.Idle)
 
   val scope = rememberCoroutineScope()
-  val context = LocalContext.current
+  val resources = LocalResources.current
   var searchMode by remember { mutableStateOf(false) }
   var searchQuery by remember { mutableStateOf("") }
   var showSortSheet by remember { mutableStateOf(false) }
@@ -102,7 +102,7 @@ fun LibraryScreen(
     libraryRescanCoordinator.scanSummaries.collect { summary ->
       if (summary.newDocuments > 0) {
         snackbarHostState.showSnackbar(
-          message = context.getString(
+          message = resources.getString(
             R.string.library_scan_complete_snackbar,
             summary.newDocuments,
           ),

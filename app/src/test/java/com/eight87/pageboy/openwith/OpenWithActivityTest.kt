@@ -2,12 +2,14 @@ package com.eight87.pageboy.openwith
 
 import android.content.Intent
 import android.net.Uri
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.eight87.pageboy.PageboyActivity
 import com.eight87.pageboy.PageboyApplication
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,14 +65,27 @@ class OpenWithActivityTest {
       action = Intent.ACTION_VIEW
     }
     ActivityScenario.launch<OpenWithActivity>(intent).use { scenario ->
-      shadowOf(android.os.Looper.getMainLooper()).idle()
-      scenario.onActivity { activity ->
-        val shadow = shadowOf(activity)
-        val next = shadow.nextStartedActivity
-        // No launched activity — failed dispatch finishes without forward.
-        assertTrue("no follow-up activity on missing data", next == null)
-        assertTrue("activity finished", activity.isFinishing)
+      // The resolver runs on Dispatchers.IO and posts back to Main, so
+      // finish() lands asynchronously; depending on timing Robolectric may
+      // also have driven the activity through onDestroy already. Pump the
+      // main looper (bounded) until the activity is finishing or gone —
+      // onActivity throws once it is destroyed, so check the state first.
+      fun finishedOrGone(): Boolean {
+        if (scenario.state == Lifecycle.State.DESTROYED) return true
+        var finishing = false
+        scenario.onActivity { finishing = it.isFinishing }
+        return finishing
       }
+      var finished = false
+      repeat(40) {
+        if (finished) return@repeat
+        shadowOf(android.os.Looper.getMainLooper()).idle()
+        Thread.sleep(50)
+        finished = finishedOrGone()
+      }
+      assertTrue("activity finished", finished)
+      // No launched activity — failed dispatch finishes without forward.
+      assertNull("no follow-up activity on missing data", shadowOf(app).nextStartedActivity)
     }
   }
 }

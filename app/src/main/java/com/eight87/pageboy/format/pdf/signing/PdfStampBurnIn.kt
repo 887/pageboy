@@ -1,8 +1,8 @@
 package com.eight87.pageboy.format.pdf.signing
 
-import com.lowagie.text.Image
-import com.lowagie.text.pdf.PdfReader
-import com.lowagie.text.pdf.PdfStamper
+import org.openpdf.text.Image
+import org.openpdf.text.pdf.PdfReader
+import org.openpdf.text.pdf.PdfStamper
 import java.io.InputStream
 import java.io.OutputStream
 

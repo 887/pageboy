@@ -82,7 +82,7 @@ class Pkcs12KeyProviderTest {
       output = out,
       material = loaded,
     )
-    val reader = com.lowagie.text.pdf.PdfReader(out.toByteArray())
+    val reader = org.openpdf.text.pdf.PdfReader(out.toByteArray())
     assertTrue(reader.acroFields.signedFieldNames.isNotEmpty())
     reader.close()
   }

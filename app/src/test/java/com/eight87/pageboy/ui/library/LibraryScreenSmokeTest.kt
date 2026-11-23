@@ -1,8 +1,7 @@
 package com.eight87.pageboy.ui.library
 
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import com.eight87.pageboy.TestApplication
 import com.eight87.pageboy.data.library.DocumentEntity
@@ -14,6 +13,7 @@ import com.eight87.pageboy.data.library.LibraryTab
 import com.eight87.pageboy.data.library.LibraryUiSettings
 import com.eight87.pageboy.data.library.ScanState
 import com.eight87.pageboy.data.library.ScanSummary
+import com.eight87.pageboy.data.library.ViewMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,8 +28,9 @@ import org.robolectric.annotation.Config
 
 /**
  * Phase B.16 — Compose smoke test. Renders [LibraryScreen] with a
- * single-document fake; asserts the four tab labels render and at least
- * one document card lands.
+ * single-document fake; asserts at least one document card lands. The
+ * tab switcher moved out of the screen into [LibraryRail] (see
+ * `LibraryRailSmokeTest`).
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -49,6 +50,7 @@ class LibraryScreenSmokeTest {
     override suspend fun recordOpen(id: String) {}
     override suspend fun setReadProgress(id: String, positionMs: Long, fraction: Float) {}
     override suspend fun setScrollPosition(id: String, positionJson: String?, fraction: Float) {}
+    override suspend fun deleteDocuments(ids: Set<String>) {}
   }
 
   private fun fakeUiSettings(): LibraryUiSettings = object : LibraryUiSettings {
@@ -57,11 +59,13 @@ class LibraryScreenSmokeTest {
     override val selectedFormats = flowOf<Set<DocumentFormat>>(emptySet())
     override val selectedCollections = flowOf<Set<String>>(emptySet())
     override val showHiddenFiles = flowOf(false)
+    override val viewMode = flowOf(ViewMode.List)
     override suspend fun setSortKey(value: LibrarySortKey) {}
     override suspend fun setTab(value: LibraryTab) {}
     override suspend fun setSelectedFormats(value: Set<DocumentFormat>) {}
     override suspend fun setSelectedCollections(value: Set<String>) {}
     override suspend fun setShowHiddenFiles(value: Boolean) {}
+    override suspend fun setViewMode(value: ViewMode) {}
   }
 
   private fun fakeCoordinator(): LibraryRescanCoordinator = object : LibraryRescanCoordinator {
@@ -85,7 +89,7 @@ class LibraryScreenSmokeTest {
   )
 
   @Test
-  fun `LibraryScreen renders four tabs and a document card when catalog is non-empty`() {
+  fun `LibraryScreen renders a document card when catalog is non-empty`() {
     composeRule.setContent {
       LibraryScreen(
         documentSource = fakeDocSource(listOf(sampleDoc())),
@@ -95,11 +99,6 @@ class LibraryScreenSmokeTest {
       )
     }
     composeRule.onNodeWithTag("library_screen").assertExists()
-    composeRule.onNodeWithTag("library_tab_row").assertExists()
-    composeRule.onNodeWithTag("library_tab_started").assertIsDisplayed()
-    composeRule.onNodeWithTag("library_tab_all").assertIsDisplayed()
-    composeRule.onNodeWithTag("library_tab_recents").assertIsDisplayed()
-    composeRule.onNodeWithTag("library_tab_pinned").assertIsDisplayed()
     composeRule.onNodeWithTag("document_card_${sampleDoc().documentId.take(8)}").assertExists()
   }
 

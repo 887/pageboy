@@ -60,6 +60,10 @@ class ScrollPersistenceTest {
         lastReadPositionMs = 0L,
       )
     }
+
+    override suspend fun deleteDocuments(ids: Set<String>) {
+      ids.forEach { docs.remove(it) }
+    }
   }
 
   private fun entity(

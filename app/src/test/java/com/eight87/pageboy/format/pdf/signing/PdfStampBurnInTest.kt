@@ -1,6 +1,6 @@
 package com.eight87.pageboy.format.pdf.signing
 
-import com.lowagie.text.pdf.PdfReader
+import org.openpdf.text.pdf.PdfReader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

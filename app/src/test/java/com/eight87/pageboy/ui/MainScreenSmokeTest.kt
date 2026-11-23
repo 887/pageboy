@@ -2,7 +2,7 @@ package com.eight87.pageboy.ui
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import com.eight87.pageboy.TestApplication
 import org.junit.Rule
@@ -13,11 +13,10 @@ import org.robolectric.annotation.Config
 
 /**
  * Phase A.3 smoke test. Renders [PageboyApp] under Robolectric and asserts
- * the four navigation rail entries (Library / Recents / Pinned / Settings)
- * are present. This catches a regression where the rail composable is
- * accidentally removed, the rail items lose their testTags, or
- * `MaterialExpressiveTheme` fails to compose under the m3-expressive
- * `1.5.0-alpha18` override.
+ * the shell (root row + Navigation 3 host) composes. This catches a
+ * regression where `MaterialExpressiveTheme` or the NavDisplay fails to
+ * compose. The library rail only renders once the data graph is wired, so
+ * its tabs are covered by `LibraryRailSmokeTest` instead.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -28,16 +27,11 @@ class MainScreenSmokeTest {
   val composeRule = createComposeRule()
 
   @Test
-  fun `PageboyApp renders the nav rail with four destinations`() {
+  fun `PageboyApp renders the root shell and nav host`() {
     composeRule.setContent { PageboyApp() }
 
     composeRule.onNodeWithTag("pageboy_root").assertExists()
-    composeRule.onNodeWithTag("pageboy_nav_rail").assertExists()
-
-    composeRule.onNodeWithTag("nav_rail_library").assertIsDisplayed()
-    composeRule.onNodeWithTag("nav_rail_recents").assertIsDisplayed()
-    composeRule.onNodeWithTag("nav_rail_pinned").assertIsDisplayed()
-    composeRule.onNodeWithTag("nav_rail_settings").assertIsDisplayed()
+    composeRule.onNodeWithTag("pageboy_nav_host").assertIsDisplayed()
   }
 
   @Test

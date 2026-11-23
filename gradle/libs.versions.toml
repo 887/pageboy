@@ -1,75 +1,69 @@
 [versions]
-androidGradlePlugin = "9.0.1"
-androidxCore = "1.18.0"
-androidxLifecycle = "2.10.0"
+androidGradlePlugin = "9.5.2"
+androidxCore = "1.19.1"
+androidxLifecycle = "2.11.1"
 androidxActivity = "1.13.0"
-androidxComposeBom = "2026.03.01"
-# m3-expressive A.1 — pin material3 to 1.5.0-alpha18, the alpha that
-# promotes `MaterialExpressiveTheme` / `expressiveLightColorScheme` to
-# public API. The 1.4.0 stable line (resolved by the BOM above) keeps
-# these `internal` — Kotlin metadata marks them `internal` even though
-# the JVM bytecode is public. Override at the artifact level so the
-# BOM still governs every other Compose artifact. Note:
-# `expressiveDarkColorScheme()` does NOT exist in alpha18 — only the
-# light factory ships; dark stays on `darkColorScheme(...)` and
-# inherits the surface ladder. Drop this override once 1.5.0 stable
-# ships and the BOM picks it up.
-composeMaterial3 = "1.5.0-alpha18"
+androidxComposeBom = "2026.11.01"
+# m3-expressive A.1 — material3 1.5.0 stable (resolved by the BOM above)
+# exposes `MaterialExpressiveTheme` / `expressiveLightColorScheme` as public
+# API, so the former 1.5.0-alpha18 artifact-level override is gone and the
+# BOM governs material3 like every other Compose artifact.
 androidxTest = "1.7.0"
 androidxTestExt = "1.3.0"
 androidxTestRunner = "1.7.0"
 androidxTestEspresso = "3.7.0"
-coroutines = "1.10.2"
+coroutines = "1.11.0"
 junit = "4.13.2"
-kotlin = "2.3.20"
-nav3Core = "1.0.1"
-lifecycleViewmodelNav3 = "2.10.0"
-kotlinxSerialization = "1.7.3"
+kotlin = "2.4.21"
+nav3Core = "1.2.2"
+lifecycleViewmodelNav3 = "2.11.1"
+kotlinxSerialization = "1.13.0"
 # oss-licenses A.1 — Cash App's Licensee plugin. Walks the resolved
 # runtime classpath at configuration time, writes a JSON inventory to
 # `app/build/reports/licensee/android<Variant>/artifacts.json`. Apache-2.0
 # itself (build-only, never shipped in the APK).
-licensee = "1.13.0"
+licensee = "1.14.1"
 # Robolectric — JVM-side Android shadows so `Context`-dependent unit tests
-# run without an emulator. 4.14.1 is the current stable line (May 2026)
+# run without an emulator. 4.18.1 is the current stable line (Nov 2026)
 # and supports `@Config(sdk = [34])`. Pairs with `androidx.test:core-ktx`
 # + `ext:junit-ktx` for the AndroidX test runner shims; Compose UI tests
 # under Robolectric reuse the `androidx.compose.ui:ui-test-junit4`
 # artifact already declared via the Compose BOM, plus the
 # `ui-test-manifest` sibling for the host harness.
-robolectric = "4.14.1"
-androidxTestCoreKtx = "1.6.1"
-androidxTestExtJunitKtx = "1.2.1"
+robolectric = "4.18.1"
+androidxTestCoreKtx = "1.7.0"
+androidxTestExtJunitKtx = "1.3.0"
 # Phase B — Room (KSP-generated DAOs), DataStore Preferences, DocumentFile (SAF).
 # All Apache-2.0; family allowlist already permits them, no Licensee gate
 # changes required.
-room = "2.8.0"
-# KSP2 uses standalone versioning decoupled from Kotlin; 2.3.8 is the
-# latest stable line at May 2026 and binary-compatible with Kotlin 2.3.20.
-ksp = "2.3.8"
-datastore = "1.1.7"
+room = "2.8.5"
+# KSP2 uses standalone versioning decoupled from Kotlin; 2.3.14 is the
+# latest stable line at Nov 2026 and works with Kotlin 2.4.21.
+ksp = "2.3.14"
+datastore = "1.3.0"
 documentfile = "1.1.0"
-# Phase D — commonmark-java 0.28.0 (released 2026-03-31). BSD-2-Clause; the
+# Phase D — commonmark-java (0.33.0 at the Nov 2026 toolchain upgrade). BSD-2-Clause; the
 # Licensee allowlist (Phase A) already permits BSD-2-Clause. Six GFM
 # extensions ship in v1; YAML front-matter is sniffed by a DIY ~40-LOC
 # pass before the body reaches commonmark — avoids the snakeyaml-engine
 # transitive (~150 KB minified). See docs/plans/format-markdown.md.
-commonmark = "0.28.0"
-# Phase F — androidx.pdf:pdf-viewer-fragment 1.0.0-alpha18 (April 2026,
-# the locked version per format-pdf.md). Apache-2.0; minSdk 28 backport
-# via sdk-extension < 13; no native code in our APK (Pdfium runs inside
+commonmark = "0.33.0"
+# Phase F — androidx.pdf:pdf-viewer-fragment 1.0.0-beta01 (first beta;
+# was 1.0.0-alpha18 per format-pdf.md). Apache-2.0; minSdk 28 backport
+# via sdk-extension < 13; AAR metadata demands compileSdk 36-ext19, which
+# compileSdk 37 satisfies without an extension platform; no native code in our APK (Pdfium runs inside
 # the system PdfRenderer service). Adds <600 KB universal APK delta;
 # transitively pulls androidx.pdf:pdf-viewer + pdf-document-service.
 # Annotation editing (Phase G) consumes the editable surface separately;
 # Phase F uses only the view side.
-androidxPdf = "1.0.0-alpha18"
-androidxFragment = "1.8.5"
-# Phase F — Coil 3.4.0 (May 2026, current stable line). Closes Phase D's
+androidxPdf = "1.0.0-beta01"
+androidxFragment = "1.9.1"
+# Phase F — Coil 3 (3.6.3 at the Nov 2026 toolchain upgrade). Closes Phase D's
 # image-rendering deferral (markdown inline / standalone images). Pure-
 # Kotlin Apache-2.0; ~1 MB APK delta. Disk cache is disabled in v1 to
 # avoid leaking image bytes across reader sessions; revisit in v1.x once
 # the user has an explicit opt-in toggle.
-coil = "3.4.0"
+coil = "3.6.3"
 
 # Phase I/J — Apache POI for DOCX (XWPF) + XLSX (XSSF) renderers. POI is
 # Apache-2.0 and on the family Licensee allowlist. We pull the stock
@@ -85,15 +79,15 @@ coil = "3.4.0"
 # works on Android with the StAX bootstrap + a couple of packaging
 # excludes for the duplicate-license META-INF jank XmlBeans ships.
 poi = "5.5.1"
-aaltoXml = "1.3.3"
+aaltoXml = "1.4.0"
 # excel-streaming-reader (formerly monitorjbl, now pjfanning/excel-streaming-reader
 # — the active maintained fork). Layered on top of POI for windowed row
 # reading on large XLSX workbooks. Apache-2.0.
-xlsxStreamer = "5.2.0"
+xlsxStreamer = "5.3.2"
 
 # Phase M — Readium Kotlin Toolkit (EPUB renderer). BSD-3-Clause; on the
-# family Licensee allowlist. 3.2.0 shipped 2026-05-13 — current stable
-# line at the time Phase M lands; previously verified live on Maven
+# family Licensee allowlist. Landed on 3.2.0 (2026-05-13); 3.4.0 at the
+# Nov 2026 toolchain upgrade; previously verified live on Maven
 # Central under org.readium.kotlin-toolkit. Three artifacts pulled:
 # readium-shared (manifest model + asset/resource abstractions),
 # readium-streamer (parser pipeline; EPUB lives in
@@ -104,10 +98,10 @@ xlsxStreamer = "5.2.0"
 # Core library desugaring is required for Readium (the toolkit uses
 # java.time + java.nio APIs that minSdk 28 does not natively cover);
 # see desugar block below.
-readium = "3.2.0"
-# 2.1.5+ required by Readium 3.2.0 AAR metadata gate.
+readium = "3.4.0"
+# 2.1.5+ required by the Readium 3.x AAR metadata gate.
 # Phase N — WorkManager for the ephemeral-cleanup daily job. Apache-2.0.
-workManager = "2.10.1"
+workManager = "2.12.0"
 desugarJdkLibs = "2.1.5"
 # Phase H — PDF signing. OpenPDF (MPL-2.0 or LGPL-2.1+; we pick MPL-2.0
 # already on the family Licensee allowlist) is the PDF writer that
@@ -125,19 +119,20 @@ desugarJdkLibs = "2.1.5"
 # in-app LicensesScreen is correct, but Licensee can't auto-classify
 # the bouncycastle.org URL and we don't want to lie via `allowUrl`.)
 #
-# Versions current per 2026 maintenance line:
-#   * org.bouncycastle:bcprov-jdk18on:1.81 (Aug 2025)
-#   * org.bouncycastle:bcpkix-jdk18on:1.81
-#   * com.github.librepdf:openpdf:2.0.4 (May 2025 — locked per format-pdf.md)
-openpdf = "2.0.4"
-bouncyCastle = "1.81"
+# Versions current at the Nov 2026 toolchain upgrade:
+#   * org.bouncycastle:bcprov-jdk18on:1.87
+#   * org.bouncycastle:bcpkix-jdk18on:1.87
+#   * com.github.librepdf:openpdf:3.0.6 (3.x renamed the packages from
+#     `com.lowagie.*` to `org.openpdf.*`; Java 21 bytecode)
+openpdf = "3.0.6"
+bouncyCastle = "1.87"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
-# m3-expressive A.1 — pinned override (see version-block comment).
-androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "composeMaterial3" }
+# m3-expressive A.1 — BOM-managed (1.5.0 stable carries the Expressive API).
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 # material-icons-extended — needed for non-core glyphs (MenuBook, History,
 # PushPin, MoreVert, Settings, etc.) used across the nav rail / settings /
 # about chrome. Not transitive in material3 1.4.0+ (m3-expressive.md gotcha #2).

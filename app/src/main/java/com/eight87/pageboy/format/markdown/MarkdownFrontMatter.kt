@@ -35,7 +35,7 @@ internal object MarkdownFrontMatter {
   private const val FENCE_ALT = "..."
 
   fun split(raw: String): Split {
-    val text = raw.removePrefix("﻿")
+    val text = raw.removePrefix("\uFEFF")
     if (!startsWithFence(text)) return Split(emptyMap(), raw)
 
     // Position immediately past the opening fence + its newline.

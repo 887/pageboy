@@ -86,6 +86,7 @@ class ReaderStateProjectorTest {
     override suspend fun recordOpen(id: String) {}
     override suspend fun setReadProgress(id: String, positionMs: Long, fraction: Float) {}
     override suspend fun setScrollPosition(id: String, positionJson: String?, fraction: Float) {}
+    override suspend fun deleteDocuments(ids: Set<String>) {}
   }
 
   @Test

@@ -1,10 +1,12 @@
 package com.eight87.pageboy.format.mobi
 
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.eight87.pageboy.format.mobi.internal.MobiImage
+import com.eight87.pageboy.format.webview.discardDeadWebView
 import java.io.ByteArrayInputStream
 
 /**
@@ -49,6 +51,11 @@ internal class MobiWebViewClient(
     val url = request?.url?.toString() ?: return false
     return !url.startsWith("about:") && !url.startsWith("data:")
   }
+
+  override fun onRenderProcessGone(
+    view: WebView,
+    detail: RenderProcessGoneDetail?,
+  ): Boolean = discardDeadWebView(view)
 
   internal companion object {
     const val SCHEME = "pageboy"
